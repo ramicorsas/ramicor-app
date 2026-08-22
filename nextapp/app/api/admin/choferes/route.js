@@ -8,7 +8,7 @@ export async function GET(req) {
   if (!session) return NextResponse.json({ error: 'No autorizado.' }, { status: 401 });
 
   const { rows } = await query(
-    `SELECT id, nombre, usuario, whatsapp, vehiculo, activo, created_at FROM transportistas ORDER BY nombre`
+    `SELECT id, nombre, usuario, whatsapp, vehiculo, capacidad_vehiculo, activo, created_at FROM transportistas ORDER BY nombre`
   );
   return NextResponse.json({ choferes: rows });
 }
@@ -17,7 +17,7 @@ export async function POST(req) {
   const session = await getAdminSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: 'No autorizado.' }, { status: 401 });
 
-  const { nombre, usuario, password, whatsapp, vehiculo } = await req.json().catch(() => ({}));
+  const { nombre, usuario, password, whatsapp, vehiculo, capacidadVehiculo } = await req.json().catch(() => ({}));
   if (!nombre || !usuario || !password) {
     return NextResponse.json({ error: 'Nombre, usuario y contraseña son obligatorios.' }, { status: 400 });
   }
@@ -29,9 +29,9 @@ export async function POST(req) {
 
   const passwordHash = await bcrypt.hash(password, 10);
   const { rows } = await query(
-    `INSERT INTO transportistas (nombre, usuario, password_hash, whatsapp, vehiculo, activo)
-     VALUES ($1,$2,$3,$4,$5,true) RETURNING id, nombre, usuario, whatsapp, vehiculo, activo, created_at`,
-    [nombre, usuario, passwordHash, whatsapp || null, vehiculo || null]
+    `INSERT INTO transportistas (nombre, usuario, password_hash, whatsapp, vehiculo, capacidad_vehiculo, activo)
+     VALUES ($1,$2,$3,$4,$5,$6,true) RETURNING id, nombre, usuario, whatsapp, vehiculo, capacidad_vehiculo, activo, created_at`,
+    [nombre, usuario, passwordHash, whatsapp || null, vehiculo || null, capacidadVehiculo || null]
   );
   return NextResponse.json({ chofer: rows[0] }, { status: 201 });
 }

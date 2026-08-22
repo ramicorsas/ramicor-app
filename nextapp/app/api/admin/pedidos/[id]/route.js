@@ -25,6 +25,7 @@ export async function PATCH(req, { params }) {
   if (body.accion === 'actualizarDatos') {
     const pedido = await actualizarDatosPedido(id, {
       cotizacion: body.cotizacion, moneda: body.moneda, origen: body.origen, destino: body.destino,
+      tipoVehiculo: body.tipoVehiculo, pesoKg: body.pesoKg,
     });
     return NextResponse.json({ pedido });
   }
@@ -32,7 +33,7 @@ export async function PATCH(req, { params }) {
   if (body.accion === 'verificar') {
     const pedido = await verificarPedido(
       id,
-      { cotizacion: body.cotizacion, moneda: body.moneda, origen: body.origen, destino: body.destino },
+      { cotizacion: body.cotizacion, moneda: body.moneda, origen: body.origen, destino: body.destino, tipoVehiculo: body.tipoVehiculo, pesoKg: body.pesoKg },
       session.adminId
     );
     return NextResponse.json({ pedido });

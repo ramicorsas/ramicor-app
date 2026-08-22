@@ -21,13 +21,14 @@ export async function PATCH(req, { params }) {
   if (body.nombre) { sets.push(`nombre = $${i++}`); values.push(body.nombre); }
   if (body.whatsapp !== undefined) { sets.push(`whatsapp = $${i++}`); values.push(body.whatsapp); }
   if (body.vehiculo !== undefined) { sets.push(`vehiculo = $${i++}`); values.push(body.vehiculo); }
+  if (body.capacidadVehiculo !== undefined) { sets.push(`capacidad_vehiculo = $${i++}`); values.push(body.capacidadVehiculo); }
   if (body.password) { sets.push(`password_hash = $${i++}`); values.push(await bcrypt.hash(body.password, 10)); }
 
   if (sets.length === 0) return NextResponse.json({ error: 'Nada para actualizar.' }, { status: 400 });
 
   values.push(id);
   const { rows } = await query(
-    `UPDATE transportistas SET ${sets.join(', ')} WHERE id = $${i} RETURNING id, nombre, usuario, whatsapp, vehiculo, activo`,
+    `UPDATE transportistas SET ${sets.join(', ')} WHERE id = $${i} RETURNING id, nombre, usuario, whatsapp, vehiculo, capacidad_vehiculo, activo`,
     values
   );
   if (!rows[0]) return NextResponse.json({ error: 'Chofer no encontrado.' }, { status: 404 });

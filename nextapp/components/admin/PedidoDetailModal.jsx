@@ -4,8 +4,9 @@ import { Modal } from '@/components/ds/Modal';
 import { Button } from '@/components/ds/Button';
 import { Badge } from '@/components/ds/Badge';
 import { Input } from '@/components/ds/Input';
+import { Select } from '@/components/ds/Select';
 import { Tabs } from '@/components/ds/Tabs';
-import { STATE_BADGE, formatMoneda } from '@/components/shared/constants';
+import { STATE_BADGE, formatMoneda, TIPOS_VEHICULO } from '@/components/shared/constants';
 import { ChatPedido } from '@/components/shared/ChatPedido';
 
 // El detalle completo del pedido desde el panel admin.
@@ -16,6 +17,8 @@ export function PedidoDetailModal({ pedido, onClose, onActualizado }) {
   const [cotizacion, setCotizacion] = useState(pedido?.cotizacion || '');
   const [origen, setOrigen] = useState(pedido?.origen || '');
   const [destino, setDestino] = useState(pedido?.destino || '');
+  const [tipoVehiculo, setTipoVehiculo] = useState(pedido?.tipoVehiculo || '');
+  const [pesoKg, setPesoKg] = useState(pedido?.pesoKg || '');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
 
@@ -42,10 +45,14 @@ export function PedidoDetailModal({ pedido, onClose, onActualizado }) {
     patch({ accion: 'revisar' });
   }
   function guardarDatos() {
-    patch({ accion: 'actualizarDatos', cotizacion: Number(cotizacion) || null, moneda: 'ARS', origen, destino });
+    patch({ accion: 'actualizarDatos', cotizacion: Number(cotizacion) || null, moneda: 'ARS', origen, destino, tipoVehiculo, pesoKg: Number(pesoKg) || null });
   }
   function confirmarYPublicar() {
-    patch({ accion: 'verificar', cotizacion: Number(cotizacion) || null, moneda: 'ARS', origen, destino });
+    if (!tipoVehiculo) {
+      setError('Elegí el tipo de vehículo requerido antes de publicar — es lo que filtra qué choferes lo ven.');
+      return;
+    }
+    patch({ accion: 'verificar', cotizacion: Number(cotizacion) || null, moneda: 'ARS', origen, destino, tipoVehiculo, pesoKg: Number(pesoKg) || null });
   }
   function cambiarEstado(estado) {
     patch({ accion: 'cambiarEstado', estado });
@@ -121,6 +128,9 @@ export function PedidoDetailModal({ pedido, onClose, onActualizado }) {
               <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>Mientras hablás con el cliente, podés ir guardando estos datos. Todavía NO es visible para los choferes.</p>
               <Input label="Origen (a publicar)" value={origen} onChange={(e) => setOrigen(e.target.value)} />
               <Input label="Destino (a publicar)" value={destino} onChange={(e) => setDestino(e.target.value)} />
+              <Select label="Tipo de vehículo requerido" required value={tipoVehiculo} onChange={(e) => setTipoVehiculo(e.target.value)}
+                options={TIPOS_VEHICULO} placeholder="Elegí una capacidad" />
+              <Input label="Peso aproximado (kg, opcional)" type="number" value={pesoKg} onChange={(e) => setPesoKg(e.target.value)} />
               <Input label="Cotización (ARS)" type="number" value={cotizacion} onChange={(e) => setCotizacion(e.target.value)} />
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <Button variant="secondary" onClick={guardarDatos} disabled={guardando}>Guardar sin publicar</Button>

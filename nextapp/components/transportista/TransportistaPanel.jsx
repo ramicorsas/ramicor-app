@@ -98,6 +98,7 @@ export function TransportistaPanel() {
                 <strong>{p.id}</strong> · {p.tipoServicio} · {p.origen || '—'} → {p.destino || '—'}
                 <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                   {formatMoneda(p.cotizacion, p.moneda)}
+                  {p.tipoVehiculo ? ` · Requiere: ${p.tipoVehiculo}` : ''}
                   {p.tipoEnvio ? ` · ${p.tipoEnvio}` : ''}
                   {p.pesoKg ? ` · ${p.pesoKg}kg` : ''}
                 </div>

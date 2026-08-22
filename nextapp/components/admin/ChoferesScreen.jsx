@@ -4,7 +4,9 @@ import { Card } from '@/components/ds/Card';
 import { Badge } from '@/components/ds/Badge';
 import { Button } from '@/components/ds/Button';
 import { Input } from '@/components/ds/Input';
+import { Select } from '@/components/ds/Select';
 import { Modal } from '@/components/ds/Modal';
+import { TIPOS_VEHICULO } from '@/components/shared/constants';
 
 // Alta y gestión de choferes desde el panel — reemplaza el "editar el HTML
 // a mano" que teníamos antes en RAMICOR. El admin crea el usuario/contraseña
@@ -13,7 +15,7 @@ export function ChoferesScreen() {
   const [choferes, setChoferes] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [modalAbierto, setModalAbierto] = useState(false);
-  const [form, setForm] = useState({ nombre: '', usuario: '', password: '', whatsapp: '', vehiculo: '' });
+  const [form, setForm] = useState({ nombre: '', usuario: '', password: '', whatsapp: '', vehiculo: '', capacidadVehiculo: '' });
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
 
@@ -46,7 +48,7 @@ export function ChoferesScreen() {
       setError(data.error || 'No se pudo crear el chofer.');
       return;
     }
-    setForm({ nombre: '', usuario: '', password: '', whatsapp: '', vehiculo: '' });
+    setForm({ nombre: '', usuario: '', password: '', whatsapp: '', vehiculo: '', capacidadVehiculo: '' });
     setModalAbierto(false);
     cargar();
   }
@@ -86,19 +88,21 @@ export function ChoferesScreen() {
               <th style={{ padding: 12 }}>Usuario</th>
               <th style={{ padding: 12 }}>WhatsApp</th>
               <th style={{ padding: 12 }}>Vehículo</th>
+              <th style={{ padding: 12 }}>Capacidad</th>
               <th style={{ padding: 12 }}>Estado</th>
               <th style={{ padding: 12 }}></th>
             </tr>
           </thead>
           <tbody>
-            {cargando && <tr><td colSpan={6} style={{ padding: 16, textAlign: 'center' }}>Cargando...</td></tr>}
-            {!cargando && choferes.length === 0 && <tr><td colSpan={6} style={{ padding: 16, textAlign: 'center' }}>Todavía no hay choferes cargados.</td></tr>}
+            {cargando && <tr><td colSpan={7} style={{ padding: 16, textAlign: 'center' }}>Cargando...</td></tr>}
+            {!cargando && choferes.length === 0 && <tr><td colSpan={7} style={{ padding: 16, textAlign: 'center' }}>Todavía no hay choferes cargados.</td></tr>}
             {choferes.map((c) => (
               <tr key={c.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                 <td style={{ padding: 12, fontWeight: 600 }}>{c.nombre}</td>
                 <td style={{ padding: 12 }}>{c.usuario}</td>
                 <td style={{ padding: 12 }}>{c.whatsapp || '—'}</td>
                 <td style={{ padding: 12 }}>{c.vehiculo || '—'}</td>
+                <td style={{ padding: 12 }}>{c.capacidad_vehiculo ? <Badge tone="info" variant="soft">{c.capacidad_vehiculo}</Badge> : '—'}</td>
                 <td style={{ padding: 12 }}>
                   <Badge tone={c.activo ? 'success' : 'neutral'} variant="soft">{c.activo ? 'Activo' : 'Inactivo'}</Badge>
                 </td>
@@ -122,7 +126,9 @@ export function ChoferesScreen() {
           <Input label="Usuario (para ingresar)" required value={form.usuario} onChange={(e) => set('usuario', e.target.value)} />
           <Input label="Contraseña" type="password" required value={form.password} onChange={(e) => set('password', e.target.value)} />
           <Input label="WhatsApp" value={form.whatsapp} onChange={(e) => set('whatsapp', e.target.value)} />
-          <Input label="Vehículo (opcional)" value={form.vehiculo} onChange={(e) => set('vehiculo', e.target.value)} />
+          <Input label="Vehículo (opcional, ej. Ford Cargo)" value={form.vehiculo} onChange={(e) => set('vehiculo', e.target.value)} />
+          <Select label="Capacidad máxima de carga" required value={form.capacidadVehiculo} onChange={(e) => set('capacidadVehiculo', e.target.value)}
+            options={TIPOS_VEHICULO} placeholder="Elegí una capacidad" />
           {error && <p style={{ color: 'var(--color-danger)', fontSize: 13 }}>{error}</p>}
           <Button type="submit" disabled={guardando} fullWidth>{guardando ? 'Creando...' : 'Crear chofer'}</Button>
         </form>

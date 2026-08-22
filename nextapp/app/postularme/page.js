@@ -4,6 +4,7 @@ import { Card } from '@/components/ds/Card';
 import { Input } from '@/components/ds/Input';
 import { Select } from '@/components/ds/Select';
 import { Button } from '@/components/ds/Button';
+import { PublicHeader, PublicFooter } from '@/components/shared/PublicHeader';
 
 const inicial = { nombre: '', telefono: '', tipoVehiculo: '', capacidadCarga: '', zona: '', disponibilidad: '' };
 
@@ -31,17 +32,23 @@ export default function PostularmePage() {
 
   if (estado === 'ok') {
     return (
-      <main style={{ maxWidth: 480, margin: '80px auto', padding: 24 }}>
+      <main>
+        <PublicHeader />
+        <div style={{ maxWidth: 480, margin: '80px auto', padding: 24 }}>
         <Card>
           <h2 style={{ marginTop: 0 }}>¡Gracias, {form.nombre.split(' ')[0]}!</h2>
           <p>Recibimos tu postulación. Nuestro equipo la revisa y te contactamos por WhatsApp si todo está en orden.</p>
         </Card>
+        </div>
+        <PublicFooter />
       </main>
     );
   }
 
   return (
-    <main style={{ maxWidth: 480, margin: '40px auto', padding: 24 }}>
+    <main>
+      <PublicHeader />
+      <div style={{ maxWidth: 480, margin: '40px auto', padding: 24 }}>
       <h1 style={{ fontSize: 24, marginBottom: 4 }}>Sumate como transportista</h1>
       <p style={{ color: 'var(--text-secondary)', marginTop: 0, marginBottom: 24 }}>Registrate en nuestra red y empezá a recibir pedidos de carga.</p>
       <Card>
@@ -61,6 +68,8 @@ export default function PostularmePage() {
           </Button>
         </form>
       </Card>
+      </div>
+        <PublicFooter />
     </main>
   );
 }

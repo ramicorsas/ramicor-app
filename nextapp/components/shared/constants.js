@@ -6,11 +6,15 @@ export const TIPOS_SERVICIO = ['Personas', 'Corporativo', 'Empresas', 'Utilitari
 export const TIPOS_ENVIO = ['Paquetería', 'Palet', 'Carga completa', 'Mudanza', 'Otro'];
 
 export const TIPOS_VEHICULO = [
-  { value: 'Utilitario', label: 'Utilitario (hasta 1 tn)' },
-  { value: 'Camion chico', label: 'Camión chico (hasta 3 tn)' },
-  { value: 'Camion mediano', label: 'Camión mediano (hasta 8 tn)' },
-  { value: 'Camion grande', label: 'Camión grande (más de 8 tn)' },
+  { value: 'Hasta 1 tn', label: 'Hasta 1 tn' },
+  { value: 'Hasta 3 tn', label: 'Hasta 3 tn' },
+  { value: 'Hasta 5 tn', label: 'Hasta 5 tn' },
+  { value: 'Mas de 5 tn', label: 'Más de 5 tn' },
 ];
+
+// Orden de menor a mayor capacidad — se usa para saber si el camión de un
+// chofer alcanza para un pedido (su capacidad tiene que ser >= la requerida).
+export const ORDEN_VEHICULO = ['Hasta 1 tn', 'Hasta 3 tn', 'Hasta 5 tn', 'Mas de 5 tn'];
 
 export const ESTADOS = ['Nuevo', 'En proceso', 'Verificado', 'Tomado', 'Completado', 'Cobrado', 'Cancelado'];
 

@@ -4,6 +4,8 @@ import { Card } from '@/components/ds/Card';
 import { Input } from '@/components/ds/Input';
 import { Select } from '@/components/ds/Select';
 import { Button } from '@/components/ds/Button';
+import { PublicHeader, PublicFooter } from '@/components/shared/PublicHeader';
+import { TIPOS_VEHICULO } from '@/components/shared/constants';
 
 const RAMICOR_WHATSAPP = '5493512120413';
 
@@ -37,7 +39,7 @@ const CAMINOS = [
   },
 ];
 
-const contactoInicial = { nombre: '', telefono: '', email: '', origen: '', destino: '', observaciones: '' };
+const contactoInicial = { nombre: '', telefono: '', email: '', origen: '', destino: '', observaciones: '', pesoKg: '', tipoVehiculo: '' };
 
 export default function CotizarPage() {
   const [camino, setCamino] = useState(null);
@@ -51,6 +53,10 @@ export default function CotizarPage() {
 
   async function enviar(e) {
     e.preventDefault();
+    if (!contacto.pesoKg || !contacto.tipoVehiculo) {
+      setEstado('faltan-datos');
+      return;
+    }
     setEstado('enviando');
     try {
       const res = await fetch('/api/pedidos', {
@@ -64,6 +70,8 @@ export default function CotizarPage() {
           origenCalle: contacto.origen,
           destinoCalle: contacto.destino,
           observaciones: contacto.observaciones,
+          pesoKg: contacto.pesoKg,
+          tipoVehiculo: contacto.tipoVehiculo,
           detalleExtra: respuestas,
         }),
       });
@@ -81,7 +89,9 @@ export default function CotizarPage() {
       `Hola RAMICOR! Acabo de pedir un flete (código ${codigo}). Mi nombre es ${contacto.nombre}.`
     );
     return (
-      <main style={{ maxWidth: 480, margin: '80px auto', padding: 24 }}>
+      <main style={{ maxWidth: 480, margin: 0, padding: 0 }}>
+        <PublicHeader />
+        <div style={{ maxWidth: 480, margin: '80px auto', padding: 24 }}>
         <Card>
           <h2 style={{ marginTop: 0 }}>¡Listo, {contacto.nombre.split(' ')[0]}!</h2>
           <p>Tu pedido quedó registrado con el código <strong>{codigo}</strong>. En breve nos contactamos para confirmar la cotización.</p>
@@ -97,13 +107,17 @@ export default function CotizarPage() {
             Avisarnos por WhatsApp →
           </a>
         </Card>
+        </div>
+        <PublicFooter />
       </main>
     );
   }
 
   if (!camino) {
     return (
-      <main style={{ maxWidth: 760, margin: '48px auto', padding: 24 }}>
+      <main>
+        <PublicHeader />
+        <div style={{ maxWidth: 760, margin: '48px auto', padding: 24 }}>
         <h1 style={{ fontSize: 24, marginBottom: 4 }}>¿Por dónde empezamos?</h1>
         <p style={{ color: 'var(--text-secondary)', marginTop: 0, marginBottom: 28 }}>Elegí la opción que corresponde a tu situación.</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
@@ -114,12 +128,16 @@ export default function CotizarPage() {
             </Card>
           ))}
         </div>
+        </div>
+        <PublicFooter />
       </main>
     );
   }
 
   return (
-    <main style={{ maxWidth: 560, margin: '40px auto', padding: 24 }}>
+    <main>
+      <PublicHeader />
+      <div style={{ maxWidth: 560, margin: '40px auto', padding: 24 }}>
       <button onClick={() => setCamino(null)} style={{ background: 'none', border: 'none', color: 'var(--samply-blue)', cursor: 'pointer', fontSize: 13, padding: 0, marginBottom: 12 }}>
         ← Elegir otra opción
       </button>
@@ -142,6 +160,12 @@ export default function CotizarPage() {
           <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '6px 0' }} />
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Input label="Peso aproximado (kg)" type="number" required value={contacto.pesoKg} onChange={(e) => setContactoField('pesoKg', e.target.value)} />
+            <Select label="Tipo de vehículo necesario" required value={contacto.tipoVehiculo} onChange={(e) => setContactoField('tipoVehiculo', e.target.value)}
+              options={TIPOS_VEHICULO} placeholder="Elegí una capacidad" />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Input label="Nombre completo" required value={contacto.nombre} onChange={(e) => setContactoField('nombre', e.target.value)} />
             <Input label="Teléfono / WhatsApp" required value={contacto.telefono} onChange={(e) => setContactoField('telefono', e.target.value)} />
           </div>
@@ -153,11 +177,14 @@ export default function CotizarPage() {
           <Input label="Observaciones" value={contacto.observaciones} onChange={(e) => setContactoField('observaciones', e.target.value)} />
 
           {estado === 'error' && <p style={{ color: 'var(--color-danger)', fontSize: 13 }}>Hubo un error al enviar. Probá de nuevo.</p>}
+          {estado === 'faltan-datos' && <p style={{ color: 'var(--color-danger)', fontSize: 13 }}>Completá el peso y el tipo de vehículo antes de enviar.</p>}
           <Button type="submit" disabled={estado === 'enviando'} fullWidth>
             {estado === 'enviando' ? 'Enviando...' : 'Solicitar flete →'}
           </Button>
         </form>
       </Card>
+      </div>
+        <PublicFooter />
     </main>
   );
 }

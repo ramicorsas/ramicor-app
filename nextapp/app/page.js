@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { RouteLine, RouteDot } from '@/components/shared/RouteLine';
+import { PublicHeader, PublicFooter } from '@/components/shared/PublicHeader';
 
 const wrap = { maxWidth: 1080, margin: '0 auto', padding: '0 24px', width: '100%', boxSizing: 'border-box' };
 
@@ -34,16 +35,29 @@ const STATS = [
 export default function LandingPage() {
   return (
     <main style={{ overflowX: 'hidden', width: '100%' }}>
+      <PublicHeader />
       {/* HERO */}
-      <section style={{ background: 'var(--samply-navy)', color: '#fff', padding: '72px 0 0' }}>
+      <section style={{ background: 'var(--samply-navy)', color: '#fff', padding: '64px 0 0' }}>
         <div style={{ ...wrap, textAlign: 'center' }} className="ramicor-fade-up">
-          <p style={{ fontSize: 12, letterSpacing: 2, color: 'var(--samply-blue-light)', marginBottom: 14, textTransform: 'uppercase', fontWeight: 600 }}>
+          <h1 style={{
+            fontSize: 'clamp(48px, 10vw, 84px)', fontWeight: 900, letterSpacing: 1, margin: 0,
+            lineHeight: 1, textTransform: 'uppercase',
+          }}>
+            RAMICOR
+          </h1>
+          <p style={{
+            fontSize: 15, letterSpacing: 3, color: 'var(--samply-blue-light)', margin: '10px 0 28px',
+            textTransform: 'uppercase', fontWeight: 600,
+          }}>
+            Soluciones Logísticas
+          </p>
+          <p style={{ fontSize: 12, letterSpacing: 1.5, color: '#8FA3BE', marginBottom: 14, textTransform: 'uppercase', fontWeight: 600 }}>
             +5 años en Argentina · Certificados · Confiables
           </p>
-          <h1 style={{ fontSize: 'clamp(32px, 5vw, 48px)', fontWeight: 800, letterSpacing: -0.5, margin: '0 auto 16px', lineHeight: 1.08, maxWidth: 700 }}>
-            Movemos lo que necesitás,<br />cuando lo necesitás.
-          </h1>
-          <p style={{ fontSize: 17, color: '#B9C6D9', margin: '0 auto 32px', maxWidth: 480 }}>
+          <p style={{ fontSize: 'clamp(20px, 3vw, 28px)', fontWeight: 700, margin: '0 auto 16px', lineHeight: 1.15, maxWidth: 640, color: '#fff' }}>
+            Movemos lo que necesitás, cuando lo necesitás.
+          </p>
+          <p style={{ fontSize: 16, color: '#B9C6D9', margin: '0 auto 32px', maxWidth: 480 }}>
             Conectamos a quienes necesitan transportar algo con choferes verificados, en toda la región.
           </p>
           <Link href="/cotizar" style={{
@@ -172,6 +186,8 @@ export default function LandingPage() {
           Pedir un flete ahora
         </Link>
       </section>
+
+      <PublicFooter />
     </main>
   );
 }

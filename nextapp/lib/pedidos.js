@@ -112,15 +112,33 @@ export async function listarPedidosAdmin() {
   return rows;
 }
 
-/** Pedidos "Verificado" (disponibles para tomar) + los que ya tomó este transportista. */
+const ORDEN_VEHICULO = ['Hasta 1 tn', 'Hasta 3 tn', 'Hasta 5 tn', 'Mas de 5 tn'];
+
+/** Pedidos "Verificado" (disponibles para tomar, filtrados por capacidad del
+ *  vehículo del chofer) + los que ya tomó este transportista. Si el pedido
+ *  no tiene tipo_vehiculo cargado, o el chofer no tiene capacidad declarada,
+ *  se muestra igual (fallback permisivo para no esconder pedidos por datos
+ *  faltantes). */
 export async function listarPedidosTransportista(transportistaId) {
+  const { rows: choferRows } = await query(`SELECT capacidad_vehiculo FROM transportistas WHERE id = $1`, [transportistaId]);
+  const capacidad = choferRows[0]?.capacidad_vehiculo || null;
+  const idxCapacidad = capacidad ? ORDEN_VEHICULO.indexOf(capacidad) : -1;
+
   const { rows } = await query(
     `SELECT ${PEDIDO_SELECT} ${PEDIDO_FROM}
      WHERE p.estado = 'Verificado' OR p.transportista_id = $1
      ORDER BY p.fecha_creacion DESC`,
     [transportistaId]
   );
-  return rows;
+
+  return rows.filter((r) => {
+    if (r.transportista_id === transportistaId) return true; // siempre ve lo suyo
+    if (r.estado !== 'Verificado') return true;
+    if (!r.tipo_vehiculo || idxCapacidad === -1) return true; // dato incompleto -> no se esconde
+    const idxRequerido = ORDEN_VEHICULO.indexOf(r.tipo_vehiculo);
+    if (idxRequerido === -1) return true;
+    return idxCapacidad >= idxRequerido; // el camión del chofer alcanza
+  });
 }
 
 /**
@@ -142,29 +160,31 @@ export async function iniciarRevision(id, adminId) {
  * (sin cambiar de estado) — para ir ajustando datos mientras se habla con
  * el cliente, antes de que confirme.
  */
-export async function actualizarDatosPedido(id, { cotizacion, moneda, origen, destino }) {
+export async function actualizarDatosPedido(id, { cotizacion, moneda, origen, destino, tipoVehiculo, pesoKg }) {
   await query(
     `UPDATE pedidos
      SET cotizacion = COALESCE($1, cotizacion), moneda = COALESCE($2, moneda),
-         origen = COALESCE($3, origen), destino = COALESCE($4, destino), updated_at = now()
-     WHERE id = $5`,
-    [cotizacion, moneda, origen, destino, id]
+         origen = COALESCE($3, origen), destino = COALESCE($4, destino),
+         tipo_vehiculo = COALESCE($5, tipo_vehiculo), peso_kg = COALESCE($6, peso_kg), updated_at = now()
+     WHERE id = $7`,
+    [cotizacion, moneda, origen, destino, tipoVehiculo, pesoKg, id]
   );
   return pedidoCompleto(id);
 }
 
 /**
  * El cliente confirmó: pasa el pedido a "Verificado" y ahí sí queda
- * disponible para que los transportistas lo vean y lo tomen.
+ * disponible para los transportistas cuyo vehículo alcance.
  */
-export async function verificarPedido(id, { cotizacion, moneda, origen, destino }, adminId) {
+export async function verificarPedido(id, { cotizacion, moneda, origen, destino, tipoVehiculo, pesoKg }, adminId) {
   const anterior = await pedidoCompleto(id);
   await query(
     `UPDATE pedidos
      SET cotizacion = COALESCE($1, cotizacion), moneda = COALESCE($2, moneda), origen = COALESCE($3, origen),
-         destino = COALESCE($4, destino), estado = 'Verificado', verificado_en = now(), updated_at = now()
-     WHERE id = $5`,
-    [cotizacion, moneda, origen, destino, id]
+         destino = COALESCE($4, destino), tipo_vehiculo = COALESCE($5, tipo_vehiculo), peso_kg = COALESCE($6, peso_kg),
+         estado = 'Verificado', verificado_en = now(), updated_at = now()
+     WHERE id = $7`,
+    [cotizacion, moneda, origen, destino, tipoVehiculo, pesoKg, id]
   );
   await registrarHistorial(id, 'estado', anterior.estado, 'Verificado', 'admin', adminId);
   return pedidoCompleto(id);
