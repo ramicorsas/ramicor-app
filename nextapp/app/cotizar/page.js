@@ -89,7 +89,7 @@ export default function CotizarPage() {
       `Hola RAMICOR! Acabo de pedir un flete (código ${codigo}). Mi nombre es ${contacto.nombre}.`
     );
     return (
-      <main style={{ maxWidth: 480, margin: 0, padding: 0 }}>
+      <main>
         <PublicHeader />
         <div style={{ maxWidth: 480, margin: '80px auto', padding: 24 }}>
         <Card>

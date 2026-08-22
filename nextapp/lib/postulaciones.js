@@ -1,5 +1,7 @@
 import { query } from '@/db/client';
 import { enviarEmail } from './email';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 const RAMICOR_NAVY = '#0B2A4A';
 const RAMICOR_ORANGE = '#E8590C';
@@ -52,4 +54,47 @@ export async function actualizarEstadoPostulacion(id, estado) {
     [estado, id]
   );
   return rows[0] || null;
+}
+
+function generarPassword() {
+  return crypto.randomBytes(6).toString('base64url'); // ej. "Kx9fQ2Zt"
+}
+
+/**
+ * Aprueba la postulación Y crea el chofer automáticamente en la tabla
+ * transportistas — pero INACTIVO (activo = false). Genera usuario/contraseña
+ * provisorios (a partir del teléfono) para que quede algo cargado; el admin
+ * después entra a "Choferes", confirma la capacidad de carga correcta
+ * (la escala de la postulación es en kg, la de RAMICOR es en toneladas — no
+ * son 1 a 1) y recién ahí lo activa.
+ */
+export async function aprobarPostulacion(id) {
+  const { rows: postRows } = await query(`SELECT * FROM postulaciones_transportistas WHERE id = $1`, [id]);
+  const postulacion = postRows[0];
+  if (!postulacion) return null;
+
+  let usuario = postulacion.telefono.replace(/\D/g, '') || `chofer${id}`;
+  let intento = 0;
+  let creado = null;
+  const passwordPlano = generarPassword();
+  const passwordHash = await bcrypt.hash(passwordPlano, 10);
+
+  while (!creado && intento < 5) {
+    const usuarioIntento = intento === 0 ? usuario : `${usuario}${intento}`;
+    try {
+      const { rows } = await query(
+        `INSERT INTO transportistas (nombre, usuario, password_hash, whatsapp, vehiculo, activo)
+         VALUES ($1,$2,$3,$4,$5,false) RETURNING id, nombre, usuario`,
+        [postulacion.nombre, usuarioIntento, passwordHash, postulacion.telefono, postulacion.tipo_vehiculo]
+      );
+      creado = rows[0];
+    } catch (err) {
+      if (err.code === '23505') { intento++; continue; } // usuario duplicado, reintentar
+      throw err;
+    }
+  }
+
+  await query(`UPDATE postulaciones_transportistas SET estado = 'Aprobada' WHERE id = $1`, [id]);
+
+  return { chofer: creado, usuario: creado?.usuario, passwordPlano };
 }
