@@ -60,6 +60,17 @@ export function ChoferesScreen() {
     cargar();
   }
 
+  async function eliminar(chofer) {
+    if (!confirm(`¿Eliminar a ${chofer.nombre}? Esta acción no se puede deshacer.`)) return;
+    const res = await fetch(`/api/admin/choferes/${chofer.id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'No se pudo eliminar.');
+      return;
+    }
+    cargar();
+  }
+
   return (
     <div style={{ padding: 24 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -94,6 +105,9 @@ export function ChoferesScreen() {
                 <td style={{ padding: 12 }}>
                   <Button size="sm" variant="ghost" onClick={() => toggleActivo(c)}>
                     {c.activo ? 'Desactivar' : 'Reactivar'}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => eliminar(c)} style={{ color: 'var(--color-danger)' }}>
+                    Eliminar
                   </Button>
                 </td>
               </tr>

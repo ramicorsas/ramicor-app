@@ -9,15 +9,7 @@ export async function POST(req) {
     return NextResponse.json({ error: 'Faltan datos obligatorios (nombre, teléfono, tipo de servicio).' }, { status: 400 });
   }
 
-  const pedido = await crearPedido({
-    nombre: body.nombre,
-    telefono: body.telefono,
-    email: body.email,
-    tipoServicio: body.tipoServicio,
-    origen: body.origen,
-    destino: body.destino,
-    descripcion: body.descripcion,
-  });
+  const pedido = await crearPedido(body);
 
   return NextResponse.json({ ok: true, codigo: pedido.codigo }, { status: 201 });
 }

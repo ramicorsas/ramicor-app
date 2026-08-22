@@ -33,3 +33,29 @@ export async function PATCH(req, { params }) {
   if (!rows[0]) return NextResponse.json({ error: 'Chofer no encontrado.' }, { status: 404 });
   return NextResponse.json({ chofer: rows[0] });
 }
+
+// DELETE — borra el chofer definitivamente, solo si nunca tomó ningún
+// pedido. Si ya tiene pedidos asociados (aunque sea uno viejo), se rechaza
+// para no perder el rastro de quién entregó qué — en ese caso hay que
+// desactivarlo en vez de borrarlo (PATCH { activo: false }).
+export async function DELETE(req, { params }) {
+  const session = await getAdminSessionFromRequest(req);
+  if (!session) return NextResponse.json({ error: 'No autorizado.' }, { status: 401 });
+
+  const id = Number(params.id);
+
+  const { rows: pedidosRows } = await query(
+    `SELECT COUNT(*)::int AS n FROM pedidos WHERE transportista_id = $1`,
+    [id]
+  );
+  if (pedidosRows[0].n > 0) {
+    return NextResponse.json(
+      { error: `Este chofer ya tiene ${pedidosRows[0].n} pedido(s) asociados — no se puede eliminar sin perder ese historial. Desactivalo en su lugar.` },
+      { status: 409 }
+    );
+  }
+
+  const { rows } = await query(`DELETE FROM transportistas WHERE id = $1 RETURNING id`, [id]);
+  if (!rows[0]) return NextResponse.json({ error: 'Chofer no encontrado.' }, { status: 404 });
+  return NextResponse.json({ ok: true });
+}

@@ -8,6 +8,10 @@ export const PEDIDO_SELECT = `
   p.id, p.codigo, p.tipo_servicio, p.origen, p.destino, p.descripcion,
   p.cotizacion, p.moneda, p.estado, p.fecha_creacion,
   p.verificado_en, p.tomado_en, p.completado_en, p.cobrado_en, p.cancelado_en,
+  p.peso_kg, p.tipo_envio, p.tipo_vehiculo, p.horario_retiro,
+  p.origen_calle, p.origen_altura, p.origen_barrio,
+  p.destino_calle, p.destino_altura, p.destino_barrio, p.observaciones,
+  p.detalle_extra,
   p.cliente_id, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono,
   p.transportista_id, t.nombre AS transportista_nombre,
   (
@@ -52,18 +56,37 @@ async function upsertCliente({ nombre, telefono, email, tipo }) {
  * Crea un pedido nuevo directo desde la landing pública, estado "Nuevo".
  * Reemplaza lo que antes hacía el form -> Apps Script -> Sheet.
  */
-export async function crearPedido({ nombre, telefono, email, tipoServicio, origen, destino, descripcion }) {
+export async function crearPedido(datos) {
+  const {
+    nombre, telefono, email, tipoServicio, descripcion,
+    pesoKg, tipoEnvio, tipoVehiculo, horarioRetiro,
+    origenCalle, origenAltura, origenBarrio,
+    destinoCalle, destinoAltura, destinoBarrio, observaciones,
+    detalleExtra,
+  } = datos;
   const clienteId = await upsertCliente({ nombre, telefono, email, tipo: tipoServicio });
   const codigo = await generarCodigo();
+  const origen = [origenCalle, origenAltura, origenBarrio].filter(Boolean).join(' ');
+  const destino = [destinoCalle, destinoAltura, destinoBarrio].filter(Boolean).join(' ');
   const { rows } = await query(
-    `INSERT INTO pedidos (codigo, cliente_id, tipo_servicio, origen, destino, descripcion, estado)
-     VALUES ($1,$2,$3,$4,$5,$6,'Nuevo') RETURNING id, codigo`,
-    [codigo, clienteId, tipoServicio, origen || null, destino || null, descripcion || null]
+    `INSERT INTO pedidos (
+       codigo, cliente_id, tipo_servicio, origen, destino, descripcion, estado,
+       peso_kg, tipo_envio, tipo_vehiculo, horario_retiro,
+       origen_calle, origen_altura, origen_barrio,
+       destino_calle, destino_altura, destino_barrio, observaciones, detalle_extra
+     )
+     VALUES ($1,$2,$3,$4,$5,$6,'Nuevo',$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+     RETURNING id, codigo`,
+    [
+      codigo, clienteId, tipoServicio, origen || null, destino || null, descripcion || null,
+      pesoKg || null, tipoEnvio || null, tipoVehiculo || null, horarioRetiro || null,
+      origenCalle || null, origenAltura || null, origenBarrio || null,
+      destinoCalle || null, destinoAltura || null, destinoBarrio || null, observaciones || null,
+      detalleExtra ? JSON.stringify(detalleExtra) : null,
+    ]
   );
   await registrarHistorial(rows[0].id, 'estado', null, 'Nuevo', 'sistema', null);
 
-  // Aviso a RAMICOR por mail — nunca tira abajo la creación del pedido si el
-  // envío falla (mismo criterio que en Samply).
   notificarNuevoPedido(rows[0], nombre, telefono).catch((err) =>
     console.log('[email] No se notificó el pedido nuevo:', err.message)
   );
@@ -101,14 +124,44 @@ export async function listarPedidosTransportista(transportistaId) {
 }
 
 /**
- * Admin carga la cotización y los datos del viaje, y pasa el pedido a
- * "Verificado" para que quede disponible para los transportistas.
+ * Admin empieza a revisar un pedido "Nuevo" — lo pasa a "En proceso" mientras
+ * cotiza y habla con el cliente. Todavía NO es visible para los choferes.
+ */
+export async function iniciarRevision(id, adminId) {
+  const anterior = await pedidoCompleto(id);
+  await query(
+    `UPDATE pedidos SET estado = 'En proceso', updated_at = now() WHERE id = $1 AND estado = 'Nuevo'`,
+    [id]
+  );
+  await registrarHistorial(id, 'estado', anterior.estado, 'En proceso', 'admin', adminId);
+  return pedidoCompleto(id);
+}
+
+/**
+ * Guarda cotización/origen/destino mientras el pedido sigue "En proceso"
+ * (sin cambiar de estado) — para ir ajustando datos mientras se habla con
+ * el cliente, antes de que confirme.
+ */
+export async function actualizarDatosPedido(id, { cotizacion, moneda, origen, destino }) {
+  await query(
+    `UPDATE pedidos
+     SET cotizacion = COALESCE($1, cotizacion), moneda = COALESCE($2, moneda),
+         origen = COALESCE($3, origen), destino = COALESCE($4, destino), updated_at = now()
+     WHERE id = $5`,
+    [cotizacion, moneda, origen, destino, id]
+  );
+  return pedidoCompleto(id);
+}
+
+/**
+ * El cliente confirmó: pasa el pedido a "Verificado" y ahí sí queda
+ * disponible para que los transportistas lo vean y lo tomen.
  */
 export async function verificarPedido(id, { cotizacion, moneda, origen, destino }, adminId) {
   const anterior = await pedidoCompleto(id);
   await query(
     `UPDATE pedidos
-     SET cotizacion = $1, moneda = COALESCE($2, moneda), origen = COALESCE($3, origen),
+     SET cotizacion = COALESCE($1, cotizacion), moneda = COALESCE($2, moneda), origen = COALESCE($3, origen),
          destino = COALESCE($4, destino), estado = 'Verificado', verificado_en = now(), updated_at = now()
      WHERE id = $5`,
     [cotizacion, moneda, origen, destino, id]
