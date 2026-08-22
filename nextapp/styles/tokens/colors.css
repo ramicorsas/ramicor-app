@@ -1,0 +1,64 @@
+/* RAMICOR — Color tokens
+   Paleta logística: navy profundo + naranja de flota (energía, movimiento).
+   Mismas variables que usa el sistema de diseño (Button, Badge, Sidebar, etc.)
+   — así todo el panel se repinta solo, sin tocar los componentes. */
+
+:root {
+  /* ---- Brand / base palette ---- */
+  --samply-navy:        #0B2A4A; /* Navy profundo — texto principal, sidebar, headers */
+  --samply-blue:        #E8590C; /* Naranja RAMICOR — botones, CTAs, headers de tabla */
+  --samply-blue-light:  #FF8A3D; /* Naranja claro / acento — badges, elementos destacados */
+  --samply-sky:         #F2884A; /* Banda de sección (naranja medio) — identidad de marca */
+  --samply-sky-soft:    #F7A876; /* naranja suave — barra superior mobile / banner presionado */
+  --samply-bg:          #F7F8FA; /* Fondo de la app, gris neutro muy claro */
+  --samply-white:       #FFFFFF; /* Superficie — cards, tablas, modales */
+  --samply-border:      #E4E7ED; /* Separadores sutiles, bordes de inputs */
+  --samply-green:       #1E8E5A; /* Éxito — Cobrado, estados positivos */
+  --samply-red:         #D93025; /* Alerta — Cancelado, errores */
+  --samply-text-2:      #62707F; /* Texto secundario — subtítulos, labels */
+
+  /* ---- Derived tints / shades ---- */
+  --samply-blue-hover:  #C94A0A;
+  --samply-blue-press:  #A83D08;
+  --samply-blue-50:     #FDEDE2;
+  --samply-blue-100:    #FBD9C0;
+  --samply-navy-700:    #123A63;
+  --samply-navy-600:    #184C82;
+  --samply-green-50:    #E5F5EC;
+  --samply-red-50:      #FBEAE8;
+  --samply-amber:       #C77700;
+  --samply-amber-50:    #FBF0DC;
+
+  /* ---- Semantic aliases ---- */
+  --color-bg:            var(--samply-bg);
+  --color-surface:       var(--samply-white);
+  --color-surface-2:     #FBFBFC;
+  --color-border:        var(--samply-border);
+  --color-border-strong: #D3D8E0;
+
+  --text-primary:        var(--samply-navy);
+  --text-secondary:      var(--samply-text-2);
+  --text-on-brand:       var(--samply-white);
+  --text-link:           var(--samply-blue);
+
+  --color-primary:       var(--samply-blue);
+  --color-primary-hover: var(--samply-blue-hover);
+  --color-primary-press: var(--samply-blue-press);
+  --color-accent:        var(--samply-blue-light);
+
+  --surface-sidebar:     var(--samply-navy);
+  --surface-banner:      var(--samply-sky);
+  --surface-banner-navy: var(--samply-navy);
+  --surface-table-head:  #FCEEE4;
+  --surface-row-hover:   var(--color-surface-2);
+  --surface-row-selected:#FBE2CF;
+
+  --color-success:       var(--samply-green);
+  --color-danger:        var(--samply-red);
+  --color-warning:       var(--samply-amber);
+
+  --color-ai:            var(--samply-blue-light);
+  --color-ai-bg:          var(--samply-blue-50);
+
+  --focus-ring:          0 0 0 3px rgba(232, 89, 12, 0.25);
+}
