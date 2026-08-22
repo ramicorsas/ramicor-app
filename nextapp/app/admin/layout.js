@@ -16,6 +16,7 @@ export default function AdminLayout({ children }) {
   const links = [
     { href: '/admin/pedidos', label: 'Pedidos' },
     { href: '/admin/choferes', label: 'Choferes' },
+    { href: '/admin/postulaciones', label: 'Postulaciones' },
   ];
 
   return (

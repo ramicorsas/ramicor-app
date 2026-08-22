@@ -5,11 +5,13 @@ import { Input } from '@/components/ds/Input';
 import { Select } from '@/components/ds/Select';
 import { Button } from '@/components/ds/Button';
 
+const RAMICOR_WHATSAPP = '5493512120413';
+
 const CAMINOS = [
   {
     id: 'Personas',
-    titulo: 'Soy persona',
-    desc: 'Pedido puntual — en el día o cuando puedas.',
+    titulo: 'Persona',
+    desc: 'Lo entregamos en el día, o cuando lo necesites.',
     preguntas: [
       { key: 'queNecesita', label: '¿Qué necesitás mover?', options: ['Heladera / lavarropas / cocina', 'Muebles (sillón, cama, ropero...)', 'Mudanza chica (cajas + muebles)', 'Materiales de construcción', 'Compra de tienda (mueblería, electro...)', 'Otro'] },
       { key: 'cuando', label: '¿Cuándo lo necesitás?', options: ['Hoy mismo (urgente)', 'Esta semana', 'La semana que viene', 'Tengo fecha específica'] },
@@ -17,8 +19,8 @@ const CAMINOS = [
   },
   {
     id: 'Corporativo',
-    titulo: 'Alquiler corporativo',
-    desc: 'Camión + chofer + combustible. Mínimo 4 hs/día.',
+    titulo: 'Corporativo',
+    desc: 'Camión, chofer y combustible incluidos. Por horas, mínimo 4.',
     preguntas: [
       { key: 'tipoVehiculo', label: 'Tipo de vehículo necesario', options: ['Camión chico (hasta 3 ton)', 'Camión mediano (3–10 ton)', 'Camión grande (+10 ton)', 'No estoy seguro — necesito asesoramiento'] },
       { key: 'horasEstimadas', label: '¿Cuántas horas estimadas?', options: ['4 horas mínimo', '8 horas (jornada completa)', 'Más de 8 horas', 'Varios días', 'Emergencia — lo antes posible'] },
@@ -26,8 +28,8 @@ const CAMINOS = [
   },
   {
     id: 'Empresas',
-    titulo: 'Somos empresa',
-    desc: 'Partner logístico certificado para tu operación.',
+    titulo: 'Empresa',
+    desc: 'Tu partner logístico certificado, sin flota propia ni costos fijos.',
     preguntas: [
       { key: 'rubro', label: 'Rubro', options: ['Corralón / materiales', 'Ferretería', 'Mueblería', 'Tecnología / electrodomésticos', 'Distribuidora', 'E-commerce', 'Sanitarios / aberturas', 'Otro'] },
       { key: 'volumen', label: 'Volumen estimado de entregas', options: ['1–5 entregas por semana', '5–20 entregas por semana', 'Más de 20 por semana', 'Variable según temporada'] },
@@ -75,11 +77,25 @@ export default function CotizarPage() {
   }
 
   if (estado === 'ok') {
+    const mensajeWsp = encodeURIComponent(
+      `Hola RAMICOR! Acabo de pedir un flete (código ${codigo}). Mi nombre es ${contacto.nombre}.`
+    );
     return (
       <main style={{ maxWidth: 480, margin: '80px auto', padding: 24 }}>
         <Card>
           <h2 style={{ marginTop: 0 }}>¡Listo, {contacto.nombre.split(' ')[0]}!</h2>
           <p>Tu pedido quedó registrado con el código <strong>{codigo}</strong>. En breve nos contactamos para confirmar la cotización.</p>
+          <a
+            href={`https://wa.me/${RAMICOR_WHATSAPP}?text=${mensajeWsp}`}
+            target="_blank" rel="noopener noreferrer"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16,
+              background: '#25D366', color: '#fff', padding: '12px 20px', borderRadius: 8,
+              fontWeight: 600, fontSize: 14, textDecoration: 'none',
+            }}
+          >
+            Avisarnos por WhatsApp →
+          </a>
         </Card>
       </main>
     );
@@ -87,14 +103,14 @@ export default function CotizarPage() {
 
   if (!camino) {
     return (
-      <main style={{ maxWidth: 720, margin: '48px auto', padding: 24 }}>
+      <main style={{ maxWidth: 760, margin: '48px auto', padding: 24 }}>
         <h1 style={{ fontSize: 24, marginBottom: 4 }}>¿Por dónde empezamos?</h1>
         <p style={{ color: 'var(--text-secondary)', marginTop: 0, marginBottom: 28 }}>Elegí la opción que corresponde a tu situación.</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
           {CAMINOS.map((c) => (
-            <Card key={c.id} interactive onClick={() => setCamino(c)}>
-              <h3 style={{ fontSize: 16, margin: '0 0 8px', color: 'var(--samply-blue)' }}>{c.titulo}</h3>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>{c.desc}</p>
+            <Card key={c.id} interactive onClick={() => setCamino(c)} style={{ textAlign: 'center', padding: '32px 20px' }}>
+              <h3 style={{ fontSize: 17, margin: '0 0 10px', color: 'var(--samply-blue)', fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase' }}>{c.titulo}</h3>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>{c.desc}</p>
             </Card>
           ))}
         </div>
@@ -107,7 +123,7 @@ export default function CotizarPage() {
       <button onClick={() => setCamino(null)} style={{ background: 'none', border: 'none', color: 'var(--samply-blue)', cursor: 'pointer', fontSize: 13, padding: 0, marginBottom: 12 }}>
         ← Elegir otra opción
       </button>
-      <h1 style={{ fontSize: 24, marginBottom: 4 }}>{camino.titulo}</h1>
+      <h1 style={{ fontSize: 20, marginBottom: 4, fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase', color: 'var(--samply-navy)' }}>{camino.titulo}</h1>
       <p style={{ color: 'var(--text-secondary)', marginTop: 0, marginBottom: 24 }}>{camino.desc}</p>
       <Card>
         <form onSubmit={enviar} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
