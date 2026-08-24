@@ -59,15 +59,16 @@ export function PedidosScreen() {
               <th style={{ padding: 12 }}>Cliente</th>
               <th style={{ padding: 12 }}>Servicio</th>
               <th style={{ padding: 12 }}>Ruta</th>
-              <th style={{ padding: 12 }}>Cotización</th>
+              <th style={{ padding: 12 }}>Cliente paga</th>
+              <th style={{ padding: 12 }}>Chofer cobra</th>
               <th style={{ padding: 12 }}>Transportista</th>
               <th style={{ padding: 12 }}>Estado</th>
               <th style={{ padding: 12 }}>Fecha</th>
             </tr>
           </thead>
           <tbody>
-            {cargando && <tr><td colSpan={8} style={{ padding: 16, textAlign: 'center' }}>Cargando...</td></tr>}
-            {!cargando && lista.length === 0 && <tr><td colSpan={8} style={{ padding: 16, textAlign: 'center' }}>No hay pedidos en esta categoría.</td></tr>}
+            {cargando && <tr><td colSpan={9} style={{ padding: 16, textAlign: 'center' }}>Cargando...</td></tr>}
+            {!cargando && lista.length === 0 && <tr><td colSpan={9} style={{ padding: 16, textAlign: 'center' }}>No hay pedidos en esta categoría.</td></tr>}
             {lista.map((p) => {
               const [tone, variant] = STATE_BADGE[p.estado] || ['neutral', 'soft'];
               return (
@@ -77,6 +78,7 @@ export function PedidosScreen() {
                   <td style={{ padding: 12 }}>{p.tipoServicio}</td>
                   <td style={{ padding: 12 }}>{p.origen || '—'} → {p.destino || '—'}</td>
                   <td style={{ padding: 12 }}>{formatMoneda(p.cotizacion, p.moneda)}</td>
+                  <td style={{ padding: 12 }}>{p.montoChofer ? formatMoneda(p.montoChofer) : '—'}</td>
                   <td style={{ padding: 12 }}>
                     {p.transportistaNombre ? (
                       <Badge tone="info" variant="soft">Asignado: {p.transportistaNombre}</Badge>

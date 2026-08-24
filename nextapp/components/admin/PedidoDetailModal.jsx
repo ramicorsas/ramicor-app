@@ -163,6 +163,18 @@ export function PedidoDetailModal({ pedido, onClose, onActualizado }) {
             </div>
           )}
 
+          {/* Los dos montos, siempre visibles y bien etiquetados — nunca desaparecen */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 13 }}>
+            <div style={{ background: 'var(--samply-navy)', color: '#fff', borderRadius: 'var(--radius-sm)', padding: 10 }}>
+              <div style={{ opacity: 0.7, fontSize: 11, marginBottom: 2 }}>Le cotizaste al CLIENTE</div>
+              <strong style={{ fontSize: 16 }}>{pedido.cotizacion ? formatMoneda(pedido.cotizacion) : 'Sin cotizar aún'}</strong>
+            </div>
+            <div style={{ background: 'var(--samply-blue)', color: '#fff', borderRadius: 'var(--radius-sm)', padding: 10 }}>
+              <div style={{ opacity: 0.85, fontSize: 11, marginBottom: 2 }}>Le corresponde al CHOFER</div>
+              <strong style={{ fontSize: 16 }}>{pedido.montoChofer ? formatMoneda(pedido.montoChofer) : 'Sin definir aún'}</strong>
+            </div>
+          </div>
+
           {/* Estado financiero — separado en dos, a propósito */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
             <div style={{ background: 'var(--color-surface-2)', borderRadius: 'var(--radius-sm)', padding: 10 }}>
@@ -173,7 +185,6 @@ export function PedidoDetailModal({ pedido, onClose, onActualizado }) {
             <div style={{ background: 'var(--color-surface-2)', borderRadius: 'var(--radius-sm)', padding: 10 }}>
               <div style={{ color: 'var(--text-secondary)', marginBottom: 2 }}>RAMICOR → Chofer</div>
               <strong>{pedido.choferPagoConfirmado ? '✅ Pagado' : 'Pendiente'}</strong>
-              {pedido.montoChofer && <div style={{ color: 'var(--text-secondary)', marginTop: 2 }}>{formatMoneda(pedido.montoChofer)}</div>}
               {pedido.pagoChoferPor && <div style={{ color: 'var(--text-secondary)', marginTop: 2 }}>por {pedido.pagoChoferPor.nombre}</div>}
               {pedido.choferPagoConfirmado && (
                 <>

@@ -14,9 +14,15 @@ import { ConfirmarPagoChofer, ComprobanteChofer } from '@/components/shared/Conf
 // información interna del admin). Solo ve su propio monto y el método de
 // pago del cliente, como referencia operativa (ej. si es efectivo, va a
 // tener que coordinar el cobro en el momento).
-function DetallePedido({ p }) {
+function DetallePedido({ p, mostrarCliente }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
+      {mostrarCliente && (p.clienteNombre || p.clienteTelefono) && (
+        <div style={{ background: 'var(--samply-blue-50)', borderRadius: 'var(--radius-sm)', padding: 10 }}>
+          <div style={{ color: 'var(--text-secondary)', fontSize: 11, marginBottom: 2 }}>Contacto del cliente</div>
+          <strong>{p.clienteNombre || '—'}</strong>{p.clienteTelefono && <span> · {p.clienteTelefono}</span>}
+        </div>
+      )}
       <p style={{ margin: 0 }}>
         <strong>{p.origen || '—'} → {p.destino || '—'}</strong>
       </p>
@@ -215,7 +221,7 @@ export function TransportistaPanel() {
       {/* Ver detalle ANTES de tomar */}
       {previsualizado && (
         <Modal open onClose={() => setPrevisualizado(null)} title={`Pedido ${previsualizado.id}`} width={520}>
-          <DetallePedido p={previsualizado} />
+          <DetallePedido p={previsualizado} mostrarCliente={false} />
           <div style={{ marginTop: 16 }}>
             <Button onClick={() => tomar(previsualizado)}>Tomar pedido</Button>
           </div>
@@ -225,7 +231,7 @@ export function TransportistaPanel() {
       {/* Detalle + chat DESPUÉS de tomar */}
       {seleccionado && (
         <Modal open onClose={() => setSeleccionado(null)} title={`Pedido ${seleccionado.id}`} width={520}>
-          <DetallePedido p={seleccionado} />
+          <DetallePedido p={seleccionado} mostrarCliente={true} />
           <div style={{ marginTop: 16 }}>
             <ChatPedido pedidoId={seleccionado.dbId} autorTipo="transportista" />
           </div>
