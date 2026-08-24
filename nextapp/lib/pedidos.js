@@ -44,7 +44,16 @@ async function generarCodigo() {
 /** Crea un cliente si no existe (matchea por teléfono) y devuelve su id. */
 async function upsertCliente({ nombre, telefono, email, tipo }) {
   const existente = await query(`SELECT id FROM clientes WHERE telefono = $1`, [telefono]);
-  if (existente.rows[0]) return existente.rows[0].id;
+  if (existente.rows[0]) {
+    // Actualiza siempre con los datos más recientes — si alguien pide un
+    // flete de nuevo con el mismo teléfono pero puso mal el nombre la
+    // primera vez, o cambió de tipo de cliente, no queda pegado el dato viejo.
+    await query(
+      `UPDATE clientes SET nombre = $1, email = COALESCE($2, email), tipo = $3 WHERE id = $4`,
+      [nombre, email || null, tipo, existente.rows[0].id]
+    );
+    return existente.rows[0].id;
+  }
   const { rows } = await query(
     `INSERT INTO clientes (nombre, telefono, email, tipo) VALUES ($1,$2,$3,$4) RETURNING id`,
     [nombre, telefono, email || null, tipo]
@@ -112,7 +121,7 @@ export async function listarPedidosAdmin() {
   return rows;
 }
 
-const ORDEN_VEHICULO = ['Hasta 1 tn', 'Hasta 3 tn', 'Hasta 5 tn', 'Mas de 5 tn'];
+const ORDEN_VEHICULO = ['Hasta 500 kg', '500 kg - 1.5 ton', '1.5 - 3 ton', '3 - 10 ton', 'Mas de 10 ton'];
 
 /** Pedidos "Verificado" (disponibles para tomar, filtrados por capacidad del
  *  vehículo del chofer) + los que ya tomó este transportista. Si el pedido

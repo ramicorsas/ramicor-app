@@ -30,7 +30,7 @@ export function PostulacionesScreen() {
       const data = await res.json();
       alert(
         `Chofer creado (INACTIVO por ahora).\n\nUsuario: ${data.usuario}\nContraseña provisoria: ${data.passwordPlano}\n\n` +
-        `Andá a "Choferes", confirmá la capacidad de carga correcta (en toneladas) y activalo cuando esté listo.`
+        `La capacidad de carga ya quedó cargada. Andá a "Choferes" y activalo cuando esté listo.`
       );
     }
     cargar();
@@ -42,7 +42,7 @@ export function PostulacionesScreen() {
     <div style={{ padding: 24 }}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Postulaciones de choferes</h1>
       <p style={{ color: 'var(--text-secondary)', marginTop: 0, marginBottom: 20, fontSize: 13 }}>
-        Al aprobar, se crea el chofer automáticamente en "Choferes" pero INACTIVO — confirmá su capacidad de carga y activalo cuando esté listo.
+        Al aprobar, se crea el chofer automáticamente en "Choferes" con su capacidad de carga ya cargada, pero INACTIVO — activalo cuando esté listo.
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {cargando && <p>Cargando...</p>}

@@ -21,7 +21,7 @@ function DetallePedido({ p }) {
         {p.tipoVehiculo && <div><span style={{ color: 'var(--text-secondary)' }}>Vehículo requerido</span><br /><strong>{p.tipoVehiculo}</strong></div>}
       </div>
       {p.horarioRetiro && <p style={{ margin: 0 }}><span style={{ color: 'var(--text-secondary)' }}>Horario de retiro:</span> {p.horarioRetiro}</p>}
-      {p.observaciones && <p style={{ margin: 0 }}><span style={{ color: 'var(--text-secondary)' }}>Observaciones:</span> {p.observaciones}</p>}
+      <p style={{ margin: 0 }}><span style={{ color: 'var(--text-secondary)' }}>Observaciones:</span> {p.observaciones || '—'}</p>
       {p.desc && <p style={{ margin: 0 }}><span style={{ color: 'var(--text-secondary)' }}>Detalle:</span> {p.desc}</p>}
       {p.detalleExtra && Object.keys(p.detalleExtra).length > 0 && (
         <div style={{ background: 'var(--color-surface-2)', borderRadius: 'var(--radius-sm)', padding: 10 }}>

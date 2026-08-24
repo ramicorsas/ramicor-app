@@ -101,7 +101,7 @@ export function PedidoDetailModal({ pedido, onClose, onActualizado }) {
             <span style={{ color: 'var(--text-secondary)' }}>Destino original:</span>{' '}
             {[pedido.destinoCalle, pedido.destinoAltura, pedido.destinoBarrio].filter(Boolean).join(' ') || pedido.destino || '—'}
           </div>
-          {pedido.observaciones && <p style={{ fontSize: 13, margin: 0 }}><span style={{ color: 'var(--text-secondary)' }}>Observaciones:</span> {pedido.observaciones}</p>}
+          {pedido.observaciones !== undefined && <p style={{ fontSize: 13, margin: 0 }}><span style={{ color: 'var(--text-secondary)' }}>Observaciones:</span> {pedido.observaciones || '—'}</p>}
           {pedido.desc && <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Detalle: {pedido.desc}</p>}
 
           {pedido.transportistaNombre && (

@@ -3,10 +3,13 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ds/Card';
 import { Badge } from '@/components/ds/Badge';
 import { Button } from '@/components/ds/Button';
+import { IconButton } from '@/components/ds/IconButton';
 import { Input } from '@/components/ds/Input';
 import { Select } from '@/components/ds/Select';
 import { Modal } from '@/components/ds/Modal';
 import { TIPOS_VEHICULO } from '@/components/shared/constants';
+
+const formVacio = { nombre: '', usuario: '', password: '', whatsapp: '', vehiculo: '', capacidadVehiculo: '' };
 
 // Alta y gestión de choferes desde el panel — reemplaza el "editar el HTML
 // a mano" que teníamos antes en RAMICOR. El admin crea el usuario/contraseña
@@ -15,7 +18,8 @@ export function ChoferesScreen() {
   const [choferes, setChoferes] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [modalAbierto, setModalAbierto] = useState(false);
-  const [form, setForm] = useState({ nombre: '', usuario: '', password: '', whatsapp: '', vehiculo: '', capacidadVehiculo: '' });
+  const [editando, setEditando] = useState(null); // chofer siendo editado, o null
+  const [form, setForm] = useState(formVacio);
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
 
@@ -33,23 +37,63 @@ export function ChoferesScreen() {
 
   function set(k, v) { setForm((f) => ({ ...f, [k]: v })); }
 
-  async function crear(e) {
+  function abrirNuevo() {
+    setEditando(null);
+    setForm(formVacio);
+    setError(null);
+    setModalAbierto(true);
+  }
+
+  function abrirEditar(chofer) {
+    setEditando(chofer);
+    setForm({
+      nombre: chofer.nombre || '', usuario: chofer.usuario || '', password: '',
+      whatsapp: chofer.whatsapp || '', vehiculo: chofer.vehiculo || '', capacidadVehiculo: chofer.capacidad_vehiculo || '',
+    });
+    setError(null);
+    setModalAbierto(true);
+  }
+
+  async function guardar(e) {
     e.preventDefault();
     setGuardando(true);
     setError(null);
-    const res = await fetch('/api/admin/choferes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
-    });
-    setGuardando(false);
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error || 'No se pudo crear el chofer.');
-      return;
+
+    if (editando) {
+      // Edición: el usuario no se puede cambiar acá (evita romper el login);
+      // la contraseña solo se actualiza si se escribe una nueva.
+      const body = {
+        nombre: form.nombre, whatsapp: form.whatsapp, vehiculo: form.vehiculo, capacidadVehiculo: form.capacidadVehiculo,
+      };
+      if (form.password) body.password = form.password;
+      const res = await fetch(`/api/admin/choferes/${editando.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      setGuardando(false);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || 'No se pudo guardar.');
+        return;
+      }
+    } else {
+      const res = await fetch('/api/admin/choferes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      setGuardando(false);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || 'No se pudo crear el chofer.');
+        return;
+      }
     }
-    setForm({ nombre: '', usuario: '', password: '', whatsapp: '', vehiculo: '', capacidadVehiculo: '' });
+
+    setForm(formVacio);
     setModalAbierto(false);
+    setEditando(null);
     cargar();
   }
 
@@ -77,7 +121,7 @@ export function ChoferesScreen() {
     <div style={{ padding: 24 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>Choferes</h1>
-        <Button onClick={() => setModalAbierto(true)}>+ Nuevo chofer</Button>
+        <Button onClick={abrirNuevo}>+ Nuevo chofer</Button>
       </div>
 
       <Card pad="none">
@@ -106,7 +150,8 @@ export function ChoferesScreen() {
                 <td style={{ padding: 12 }}>
                   <Badge tone={c.activo ? 'success' : 'neutral'} variant="soft">{c.activo ? 'Activo' : 'Inactivo'}</Badge>
                 </td>
-                <td style={{ padding: 12 }}>
+                <td style={{ padding: 12, display: 'flex', gap: 4, alignItems: 'center' }}>
+                  <IconButton icon="edit" title="Editar" onClick={() => abrirEditar(c)} />
                   <Button size="sm" variant="ghost" onClick={() => toggleActivo(c)}>
                     {c.activo ? 'Desactivar' : 'Reactivar'}
                   </Button>
@@ -120,17 +165,24 @@ export function ChoferesScreen() {
         </table>
       </Card>
 
-      <Modal open={modalAbierto} onClose={() => setModalAbierto(false)} title="Nuevo chofer" width={440}>
-        <form onSubmit={crear} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <Modal open={modalAbierto} onClose={() => setModalAbierto(false)} title={editando ? `Editar a ${editando.nombre}` : 'Nuevo chofer'} width={440}>
+        <form onSubmit={guardar} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <Input label="Nombre completo" required value={form.nombre} onChange={(e) => set('nombre', e.target.value)} />
-          <Input label="Usuario (para ingresar)" required value={form.usuario} onChange={(e) => set('usuario', e.target.value)} />
-          <Input label="Contraseña" type="password" required value={form.password} onChange={(e) => set('password', e.target.value)} />
+          {!editando && (
+            <Input label="Usuario (para ingresar)" required value={form.usuario} onChange={(e) => set('usuario', e.target.value)} />
+          )}
+          <Input
+            label={editando ? 'Nueva contraseña (dejar vacío para no cambiarla)' : 'Contraseña'}
+            type="password" required={!editando} value={form.password} onChange={(e) => set('password', e.target.value)}
+          />
           <Input label="WhatsApp" value={form.whatsapp} onChange={(e) => set('whatsapp', e.target.value)} />
           <Input label="Vehículo (opcional, ej. Ford Cargo)" value={form.vehiculo} onChange={(e) => set('vehiculo', e.target.value)} />
           <Select label="Capacidad máxima de carga" required value={form.capacidadVehiculo} onChange={(e) => set('capacidadVehiculo', e.target.value)}
             options={TIPOS_VEHICULO} placeholder="Elegí una capacidad" />
           {error && <p style={{ color: 'var(--color-danger)', fontSize: 13 }}>{error}</p>}
-          <Button type="submit" disabled={guardando} fullWidth>{guardando ? 'Creando...' : 'Crear chofer'}</Button>
+          <Button type="submit" disabled={guardando} fullWidth>
+            {guardando ? 'Guardando...' : editando ? 'Guardar cambios' : 'Crear chofer'}
+          </Button>
         </form>
       </Modal>
     </div>

@@ -5,8 +5,9 @@ import { Input } from '@/components/ds/Input';
 import { Select } from '@/components/ds/Select';
 import { Button } from '@/components/ds/Button';
 import { PublicHeader, PublicFooter } from '@/components/shared/PublicHeader';
+import { TIPOS_VEHICULO } from '@/components/shared/constants';
 
-const inicial = { nombre: '', telefono: '', tipoVehiculo: '', capacidadCarga: '', zona: '', disponibilidad: '' };
+const inicial = { nombre: '', telefono: '', email: '', tipoVehiculo: '', capacidadCarga: '', zona: '', disponibilidad: '' };
 
 export default function PostularmePage() {
   const [form, setForm] = useState(inicial);
@@ -55,10 +56,11 @@ export default function PostularmePage() {
         <form onSubmit={enviar} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <Input label="Nombre completo" required value={form.nombre} onChange={(e) => set('nombre', e.target.value)} />
           <Input label="Teléfono / WhatsApp" required value={form.telefono} onChange={(e) => set('telefono', e.target.value)} />
+          <Input label="Email" type="email" required value={form.email} onChange={(e) => set('email', e.target.value)} />
           <Select label="Tipo de vehículo" value={form.tipoVehiculo} onChange={(e) => set('tipoVehiculo', e.target.value)}
             options={['Camioneta pick-up', 'Camioneta con caja', 'Utilitario / furgón', 'Camión chico (hasta 3 ton)', 'Camión mediano (3–10 ton)', 'Camión grande (+10 ton)'].map((v) => ({ value: v, label: v }))} />
           <Select label="Capacidad de carga" value={form.capacidadCarga} onChange={(e) => set('capacidadCarga', e.target.value)}
-            options={['Hasta 500 kg', '500 kg – 1.5 ton', '1.5 – 3 ton', '3 – 10 ton', 'Más de 10 ton'].map((v) => ({ value: v, label: v }))} />
+            options={TIPOS_VEHICULO} />
           <Input label="Zona de operación" value={form.zona} onChange={(e) => set('zona', e.target.value)} />
           <Select label="Disponibilidad horaria" value={form.disponibilidad} onChange={(e) => set('disponibilidad', e.target.value)}
             options={['Mañanas', 'Tardes', 'Todo el día', 'Fines de semana también', 'Variable'].map((v) => ({ value: v, label: v }))} />

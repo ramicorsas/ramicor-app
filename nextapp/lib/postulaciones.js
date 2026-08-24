@@ -11,11 +11,11 @@ function adminEmails() {
   return raw.split(',').map((e) => e.trim()).filter(Boolean);
 }
 
-export async function crearPostulacion({ nombre, telefono, tipoVehiculo, capacidadCarga, zona, disponibilidad }) {
+export async function crearPostulacion({ nombre, telefono, email, tipoVehiculo, capacidadCarga, zona, disponibilidad }) {
   const { rows } = await query(
-    `INSERT INTO postulaciones_transportistas (nombre, telefono, tipo_vehiculo, capacidad_carga, zona, disponibilidad)
-     VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
-    [nombre, telefono, tipoVehiculo || null, capacidadCarga || null, zona || null, disponibilidad || null]
+    `INSERT INTO postulaciones_transportistas (nombre, telefono, email, tipo_vehiculo, capacidad_carga, zona, disponibilidad)
+     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+    [nombre, telefono, email, tipoVehiculo || null, capacidadCarga || null, zona || null, disponibilidad || null]
   );
 
   const destinatarios = adminEmails();
@@ -73,19 +73,23 @@ export async function aprobarPostulacion(id) {
   const postulacion = postRows[0];
   if (!postulacion) return null;
 
-  let usuario = postulacion.telefono.replace(/\D/g, '') || `chofer${id}`;
+  let usuario = postulacion.email || postulacion.telefono.replace(/\D/g, '') || `chofer${id}`;
   let intento = 0;
   let creado = null;
   const passwordPlano = generarPassword();
   const passwordHash = await bcrypt.hash(passwordPlano, 10);
 
   while (!creado && intento < 5) {
-    const usuarioIntento = intento === 0 ? usuario : `${usuario}${intento}`;
+    const usuarioIntento = intento === 0
+      ? usuario
+      : usuario.includes('@')
+        ? usuario.replace('@', `${intento}@`)
+        : `${usuario}${intento}`;
     try {
       const { rows } = await query(
-        `INSERT INTO transportistas (nombre, usuario, password_hash, whatsapp, vehiculo, activo)
-         VALUES ($1,$2,$3,$4,$5,false) RETURNING id, nombre, usuario`,
-        [postulacion.nombre, usuarioIntento, passwordHash, postulacion.telefono, postulacion.tipo_vehiculo]
+        `INSERT INTO transportistas (nombre, usuario, password_hash, whatsapp, vehiculo, capacidad_vehiculo, activo)
+         VALUES ($1,$2,$3,$4,$5,$6,false) RETURNING id, nombre, usuario`,
+        [postulacion.nombre, usuarioIntento, passwordHash, postulacion.telefono, postulacion.tipo_vehiculo, postulacion.capacidad_carga]
       );
       creado = rows[0];
     } catch (err) {
