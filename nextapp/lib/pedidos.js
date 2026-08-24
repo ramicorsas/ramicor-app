@@ -11,7 +11,8 @@ export const PEDIDO_SELECT = `
   p.peso_kg, p.tipo_envio, p.tipo_vehiculo, p.horario_retiro,
   p.origen_calle, p.origen_altura, p.origen_barrio,
   p.destino_calle, p.destino_altura, p.destino_barrio, p.observaciones,
-  p.detalle_extra,
+  p.detalle_extra, p.metodo_pago, p.monto_chofer, p.chofer_pago_confirmado, p.chofer_pago_confirmado_en,
+  p.chofer_pago_metodo, p.chofer_pago_comprobante,
   p.cliente_id, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono,
   p.transportista_id, t.nombre AS transportista_nombre,
   (
@@ -26,7 +27,20 @@ export const PEDIDO_SELECT = `
     LEFT JOIN transportistas tr ON h.autor_tipo = 'transportista' AND tr.id = h.autor_id
     WHERE h.pedido_id = p.id AND h.campo = 'estado' AND h.valor_nuevo = 'Cobrado'
     ORDER BY h.fecha DESC LIMIT 1
-  ) AS cobrado_por
+  ) AS cobrado_por,
+  (
+    SELECT json_build_object(
+      'tipo', h.autor_tipo,
+      'nombre', CASE WHEN h.autor_tipo = 'admin' THEN adm.nombre
+                     WHEN h.autor_tipo = 'transportista' THEN tr.nombre
+                     ELSE 'Sistema' END
+    )
+    FROM pedidos_historial h
+    LEFT JOIN admins adm ON h.autor_tipo = 'admin' AND adm.id = h.autor_id
+    LEFT JOIN transportistas tr ON h.autor_tipo = 'transportista' AND tr.id = h.autor_id
+    WHERE h.pedido_id = p.id AND h.campo = 'pago_chofer' AND h.valor_nuevo = 'Confirmado'
+    ORDER BY h.fecha DESC LIMIT 1
+  ) AS pago_chofer_por
 `;
 
 const PEDIDO_FROM = `
@@ -71,7 +85,7 @@ export async function crearPedido(datos) {
     pesoKg, tipoEnvio, tipoVehiculo, horarioRetiro,
     origenCalle, origenAltura, origenBarrio,
     destinoCalle, destinoAltura, destinoBarrio, observaciones,
-    detalleExtra,
+    detalleExtra, metodoPago,
   } = datos;
   const clienteId = await upsertCliente({ nombre, telefono, email, tipo: tipoServicio });
   const codigo = await generarCodigo();
@@ -82,16 +96,16 @@ export async function crearPedido(datos) {
        codigo, cliente_id, tipo_servicio, origen, destino, descripcion, estado,
        peso_kg, tipo_envio, tipo_vehiculo, horario_retiro,
        origen_calle, origen_altura, origen_barrio,
-       destino_calle, destino_altura, destino_barrio, observaciones, detalle_extra
+       destino_calle, destino_altura, destino_barrio, observaciones, detalle_extra, metodo_pago
      )
-     VALUES ($1,$2,$3,$4,$5,$6,'Nuevo',$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+     VALUES ($1,$2,$3,$4,$5,$6,'Nuevo',$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
      RETURNING id, codigo`,
     [
       codigo, clienteId, tipoServicio, origen || null, destino || null, descripcion || null,
       pesoKg || null, tipoEnvio || null, tipoVehiculo || null, horarioRetiro || null,
       origenCalle || null, origenAltura || null, origenBarrio || null,
       destinoCalle || null, destinoAltura || null, destinoBarrio || null, observaciones || null,
-      detalleExtra ? JSON.stringify(detalleExtra) : null,
+      detalleExtra ? JSON.stringify(detalleExtra) : null, metodoPago || null,
     ]
   );
   await registrarHistorial(rows[0].id, 'estado', null, 'Nuevo', 'sistema', null);
@@ -169,14 +183,15 @@ export async function iniciarRevision(id, adminId) {
  * (sin cambiar de estado) — para ir ajustando datos mientras se habla con
  * el cliente, antes de que confirme.
  */
-export async function actualizarDatosPedido(id, { cotizacion, moneda, origen, destino, tipoVehiculo, pesoKg }) {
+export async function actualizarDatosPedido(id, { cotizacion, moneda, origen, destino, tipoVehiculo, pesoKg, montoChofer }) {
   await query(
     `UPDATE pedidos
      SET cotizacion = COALESCE($1, cotizacion), moneda = COALESCE($2, moneda),
          origen = COALESCE($3, origen), destino = COALESCE($4, destino),
-         tipo_vehiculo = COALESCE($5, tipo_vehiculo), peso_kg = COALESCE($6, peso_kg), updated_at = now()
-     WHERE id = $7`,
-    [cotizacion, moneda, origen, destino, tipoVehiculo, pesoKg, id]
+         tipo_vehiculo = COALESCE($5, tipo_vehiculo), peso_kg = COALESCE($6, peso_kg),
+         monto_chofer = COALESCE($7, monto_chofer), updated_at = now()
+     WHERE id = $8`,
+    [cotizacion, moneda, origen, destino, tipoVehiculo, pesoKg, montoChofer, id]
   );
   return pedidoCompleto(id);
 }
@@ -185,15 +200,16 @@ export async function actualizarDatosPedido(id, { cotizacion, moneda, origen, de
  * El cliente confirmó: pasa el pedido a "Verificado" y ahí sí queda
  * disponible para los transportistas cuyo vehículo alcance.
  */
-export async function verificarPedido(id, { cotizacion, moneda, origen, destino, tipoVehiculo, pesoKg }, adminId) {
+export async function verificarPedido(id, { cotizacion, moneda, origen, destino, tipoVehiculo, pesoKg, montoChofer }, adminId) {
   const anterior = await pedidoCompleto(id);
   await query(
     `UPDATE pedidos
      SET cotizacion = COALESCE($1, cotizacion), moneda = COALESCE($2, moneda), origen = COALESCE($3, origen),
          destino = COALESCE($4, destino), tipo_vehiculo = COALESCE($5, tipo_vehiculo), peso_kg = COALESCE($6, peso_kg),
+         monto_chofer = COALESCE($7, monto_chofer),
          estado = 'Verificado', verificado_en = now(), updated_at = now()
-     WHERE id = $7`,
-    [cotizacion, moneda, origen, destino, tipoVehiculo, pesoKg, id]
+     WHERE id = $8`,
+    [cotizacion, moneda, origen, destino, tipoVehiculo, pesoKg, montoChofer, id]
   );
   await registrarHistorial(id, 'estado', anterior.estado, 'Verificado', 'admin', adminId);
   return pedidoCompleto(id);
@@ -217,6 +233,34 @@ export async function tomarPedido(id, transportistaId) {
   return pedido;
 }
 
+/**
+ * Para Corporativo / Empresas / Utilitarios y Maquinas — operaciones más
+ * grandes que el admin negocia y asigna a mano, NUNCA se publican al pool
+ * general de choferes (nunca pasan por "Verificado"). El admin elige un
+ * chofer puntual y el pedido pasa directo a "Tomado", saltando el paso de
+ * autoservicio que sí usa Personas.
+ */
+export async function asignarChoferDirecto(id, transportistaId, { cotizacion, moneda, origen, destino, tipoVehiculo, pesoKg, montoChofer }, adminId) {
+  const anterior = await pedidoCompleto(id);
+  await query(
+    `UPDATE pedidos
+     SET cotizacion = COALESCE($1, cotizacion), moneda = COALESCE($2, moneda), origen = COALESCE($3, origen),
+         destino = COALESCE($4, destino), tipo_vehiculo = COALESCE($5, tipo_vehiculo), peso_kg = COALESCE($6, peso_kg),
+         monto_chofer = COALESCE($7, monto_chofer),
+         transportista_id = $8, estado = 'Tomado', verificado_en = now(), tomado_en = now(), updated_at = now()
+     WHERE id = $9`,
+    [cotizacion, moneda, origen, destino, tipoVehiculo, pesoKg, montoChofer, transportistaId, id]
+  );
+  await registrarHistorial(id, 'estado', anterior.estado, 'Tomado', 'admin', adminId);
+
+  const pedido = await pedidoCompleto(id);
+  notificarPedidoTomado(pedido, pedido.transportista_nombre).catch((err) =>
+    console.log('[email] No se notificó la asignación:', err.message)
+  );
+
+  return pedido;
+}
+
 /** Cambia el estado a Completado, Cobrado o Cancelado. */
 export async function cambiarEstadoPedido(id, nuevoEstado, autorTipo, autorId) {
   const anterior = await pedidoCompleto(id);
@@ -224,6 +268,46 @@ export async function cambiarEstadoPedido(id, nuevoEstado, autorTipo, autorId) {
   const setFecha = columnaFecha ? `, ${columnaFecha} = now()` : '';
   await query(`UPDATE pedidos SET estado = $1, updated_at = now() ${setFecha} WHERE id = $2`, [nuevoEstado, id]);
   await registrarHistorial(id, 'estado', anterior.estado, nuevoEstado, autorTipo, autorId);
+  return pedidoCompleto(id);
+}
+
+/**
+ * El CHOFER confirma que ya recibió su pago (monto_chofer) de parte de
+ * RAMICOR. Totalmente independiente del estado "Cobrado" del pedido, que
+ * es información interna del admin sobre si el CLIENTE le pagó a RAMICOR.
+ * Un chofer no puede tocar esto de otro pedido que no sea suyo.
+ */
+export async function confirmarPagoChofer(id, transportistaId, extra = {}) {
+  const actual = await pedidoCompleto(id);
+  if (!actual || actual.transportista_id !== transportistaId) return null;
+  return marcarPagoChofer(id, true, 'transportista', transportistaId, extra);
+}
+
+/**
+ * El ADMIN marca (o desmarca) el pago al chofer — para cuando le paga en
+ * mano y no depende de que el chofer entre a confirmarlo desde su panel.
+ * Mismo campo que usa confirmarPagoChofer, pero sin restricción de dueño.
+ * `extra` puede traer { metodo, comprobante } — comprobante es una imagen
+ * o PDF en base64 (data URI), guardado tal cual, sin storage externo.
+ */
+export async function marcarPagoChofer(id, confirmado, autorTipo, autorId, extra = {}) {
+  const anterior = await pedidoCompleto(id);
+  const { metodo, comprobante } = extra;
+  await query(
+    `UPDATE pedidos
+     SET chofer_pago_confirmado = $1, chofer_pago_confirmado_en = ${confirmado ? 'now()' : 'NULL'},
+         chofer_pago_metodo = COALESCE($2, chofer_pago_metodo),
+         chofer_pago_comprobante = COALESCE($3, chofer_pago_comprobante),
+         updated_at = now()
+     WHERE id = $4`,
+    [confirmado, metodo || null, comprobante || null, id]
+  );
+  await registrarHistorial(
+    id, 'pago_chofer',
+    anterior.chofer_pago_confirmado ? 'Confirmado' : 'Pendiente',
+    confirmado ? 'Confirmado' : 'Pendiente',
+    autorTipo, autorId
+  );
   return pedidoCompleto(id);
 }
 

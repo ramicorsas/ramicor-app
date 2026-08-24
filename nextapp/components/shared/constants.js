@@ -3,6 +3,10 @@
 
 export const TIPOS_SERVICIO = ['Personas', 'Corporativo', 'Empresas', 'Utilitarios y Maquinas'];
 
+export const METODOS_PAGO = ['Efectivo', 'Tarjeta', 'Transferencia'];
+
+export const METODOS_PAGO_CHOFER = ['Efectivo', 'Transferencia', 'Mercado Pago', 'Otro'];
+
 export const TIPOS_ENVIO = ['Paquetería', 'Palet', 'Carga completa', 'Mudanza', 'Otro'];
 
 export const TIPOS_VEHICULO = [
@@ -81,5 +85,11 @@ export function mapPedido(p) {
     destinoBarrio: p.destino_barrio,
     observaciones: p.observaciones,
     detalleExtra: p.detalle_extra || {},
+    metodoPago: p.metodo_pago,
+    montoChofer: p.monto_chofer,
+    choferPagoConfirmado: p.chofer_pago_confirmado,
+    pagoChoferPor: p.pago_chofer_por || null,
+    choferPagoMetodo: p.chofer_pago_metodo,
+    choferPagoComprobante: p.chofer_pago_comprobante,
   };
 }

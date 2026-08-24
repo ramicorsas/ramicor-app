@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server';
 import { getAdminSessionFromRequest } from '@/lib/auth';
-import { verificarPedido, cambiarEstadoPedido, pedidoCompleto, iniciarRevision, actualizarDatosPedido } from '@/lib/pedidos';
+import { verificarPedido, cambiarEstadoPedido, pedidoCompleto, iniciarRevision, actualizarDatosPedido, asignarChoferDirecto, marcarPagoChofer } from '@/lib/pedidos';
 
 // PATCH — acciones posibles desde el panel admin:
 //   1) { accion: 'revisar' } -> pasa el pedido de "Nuevo" a "En proceso"
-//      (todavía no es visible para los choferes).
-//   2) { accion: 'actualizarDatos', cotizacion, moneda, origen, destino } ->
-//      guarda cambios mientras el pedido sigue "En proceso", sin cambiar de estado.
-//   3) { accion: 'verificar', cotizacion, moneda, origen, destino } -> el
-//      cliente confirmó: pasa a "Verificado" y ahí sí queda visible para los choferes.
-//   4) { accion: 'cambiarEstado', estado: 'Completado'|'Cobrado'|'Cancelado' }
+//   2) { accion: 'actualizarDatos', ... } -> guarda cambios sin cambiar de estado
+//   3) { accion: 'verificar', ... } -> PERSONAS: publica al pool de choferes
+//   4) { accion: 'asignarChofer', transportistaId, ... } -> CORPORATIVO / EMPRESAS /
+//      UTILITARIOS: asigna directo a un chofer puntual, sin pasar por el pool
+//   5) { accion: 'cambiarEstado', estado: 'Completado'|'Cobrado'|'Cancelado' }
+//   6) { accion: 'marcarPagoChofer', confirmado: true|false } -> el admin marca
+//      (o desmarca) si ya le pagó al chofer, sin depender de que él lo confirme
 export async function PATCH(req, { params }) {
   const session = await getAdminSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: 'No autorizado.' }, { status: 401 });
@@ -25,7 +26,7 @@ export async function PATCH(req, { params }) {
   if (body.accion === 'actualizarDatos') {
     const pedido = await actualizarDatosPedido(id, {
       cotizacion: body.cotizacion, moneda: body.moneda, origen: body.origen, destino: body.destino,
-      tipoVehiculo: body.tipoVehiculo, pesoKg: body.pesoKg,
+      tipoVehiculo: body.tipoVehiculo, pesoKg: body.pesoKg, montoChofer: body.montoChofer,
     });
     return NextResponse.json({ pedido });
   }
@@ -33,7 +34,19 @@ export async function PATCH(req, { params }) {
   if (body.accion === 'verificar') {
     const pedido = await verificarPedido(
       id,
-      { cotizacion: body.cotizacion, moneda: body.moneda, origen: body.origen, destino: body.destino, tipoVehiculo: body.tipoVehiculo, pesoKg: body.pesoKg },
+      { cotizacion: body.cotizacion, moneda: body.moneda, origen: body.origen, destino: body.destino, tipoVehiculo: body.tipoVehiculo, pesoKg: body.pesoKg, montoChofer: body.montoChofer },
+      session.adminId
+    );
+    return NextResponse.json({ pedido });
+  }
+
+  if (body.accion === 'asignarChofer') {
+    if (!body.transportistaId) {
+      return NextResponse.json({ error: 'Elegí un chofer para asignar.' }, { status: 400 });
+    }
+    const pedido = await asignarChoferDirecto(
+      id, Number(body.transportistaId),
+      { cotizacion: body.cotizacion, moneda: body.moneda, origen: body.origen, destino: body.destino, tipoVehiculo: body.tipoVehiculo, pesoKg: body.pesoKg, montoChofer: body.montoChofer },
       session.adminId
     );
     return NextResponse.json({ pedido });
@@ -44,6 +57,11 @@ export async function PATCH(req, { params }) {
       return NextResponse.json({ error: 'Estado inválido.' }, { status: 400 });
     }
     const pedido = await cambiarEstadoPedido(id, body.estado, 'admin', session.adminId);
+    return NextResponse.json({ pedido });
+  }
+
+  if (body.accion === 'marcarPagoChofer') {
+    const pedido = await marcarPagoChofer(id, !!body.confirmado, 'admin', session.adminId, { metodo: body.metodo, comprobante: body.comprobante });
     return NextResponse.json({ pedido });
   }
 

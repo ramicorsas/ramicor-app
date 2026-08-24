@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getTransportistaSessionFromRequest } from '@/lib/auth';
-import { tomarPedido, cambiarEstadoPedido, pedidoCompleto } from '@/lib/pedidos';
+import { tomarPedido, cambiarEstadoPedido, pedidoCompleto, confirmarPagoChofer } from '@/lib/pedidos';
 
-// PATCH — dos acciones desde el panel del transportista:
-//   1) { accion: 'tomar' }     -> pasa el pedido de Verificado a Tomado
-//   2) { accion: 'completar' } -> pasa el pedido a Completado
+// PATCH — acciones desde el panel del transportista:
+//   1) { accion: 'tomar' }         -> pasa el pedido de Verificado a Tomado
+//   2) { accion: 'completar' }     -> pasa el pedido a Completado (entregado)
+//   3) { accion: 'confirmarPago' } -> el CHOFER confirma que YA recibió su
+//      propio pago de RAMICOR (monto_chofer). No tiene nada que ver con el
+//      "Cobrado" que usa el admin para llevar la cuenta de si el cliente
+//      le pagó a RAMICOR — son dos cosas separadas a propósito.
 export async function PATCH(req, { params }) {
   const session = await getTransportistaSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: 'No autorizado.' }, { status: 401 });
@@ -29,12 +33,11 @@ export async function PATCH(req, { params }) {
     return NextResponse.json({ pedido });
   }
 
-  if (body.accion === 'cobrar') {
-    const actual = await pedidoCompleto(id);
-    if (!actual || actual.transportista_id !== session.transportistaId) {
+  if (body.accion === 'confirmarPago') {
+    const pedido = await confirmarPagoChofer(id, session.transportistaId, { metodo: body.metodo, comprobante: body.comprobante });
+    if (!pedido) {
       return NextResponse.json({ error: 'No autorizado sobre este pedido.' }, { status: 403 });
     }
-    const pedido = await cambiarEstadoPedido(id, 'Cobrado', 'transportista', session.transportistaId);
     return NextResponse.json({ pedido });
   }
 

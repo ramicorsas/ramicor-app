@@ -8,13 +8,22 @@ import { Modal } from '@/components/ds/Modal';
 import { Tabs } from '@/components/ds/Tabs';
 import { mapPedido, STATE_BADGE, formatMoneda } from '@/components/shared/constants';
 import { ChatPedido } from '@/components/shared/ChatPedido';
+import { ConfirmarPagoChofer, ComprobanteChofer } from '@/components/shared/ConfirmarPagoChofer';
 
+// El chofer NUNCA ve "cotizacion" (eso es lo que le cobramos al cliente,
+// información interna del admin). Solo ve su propio monto y el método de
+// pago del cliente, como referencia operativa (ej. si es efectivo, va a
+// tener que coordinar el cobro en el momento).
 function DetallePedido({ p }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
       <p style={{ margin: 0 }}>
-        <strong>{p.origen || '—'} → {p.destino || '—'}</strong> · {formatMoneda(p.cotizacion, p.moneda)}
+        <strong>{p.origen || '—'} → {p.destino || '—'}</strong>
       </p>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <Badge tone="success" variant="soft">Tu pago: {p.montoChofer ? formatMoneda(p.montoChofer) : 'a coordinar'}</Badge>
+        {p.metodoPago && <Badge tone="neutral" variant="outline">Cliente paga: {p.metodoPago}</Badge>}
+      </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
         {p.tipoEnvio && <div><span style={{ color: 'var(--text-secondary)' }}>Tipo de envío</span><br /><strong>{p.tipoEnvio}</strong></div>}
         {p.pesoKg && <div><span style={{ color: 'var(--text-secondary)' }}>Peso</span><br /><strong>{p.pesoKg} kg</strong></div>}
@@ -78,11 +87,11 @@ export function TransportistaPanel() {
     cargar();
   }
 
-  async function cobrar(p) {
+  async function confirmarPago(p, metodo, comprobante) {
     await fetch(`/api/transportista/pedidos/${p.dbId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accion: 'cobrar' }),
+      body: JSON.stringify({ accion: 'confirmarPago', metodo, comprobante }),
     });
     setSeleccionado(null);
     cargar();
@@ -90,17 +99,17 @@ export function TransportistaPanel() {
 
   const disponibles = pedidos.filter((p) => p.estado === 'Verificado');
   const propios = pedidos.filter((p) => p.transportistaId != null);
-  // Activos: todavía tienen algo pendiente (entregar o cobrar).
-  const activos = propios.filter((p) => ['Tomado', 'Completado'].includes(p.estado));
-  // Finalizados: ya no requieren ninguna acción — se consultan desde Reporte.
-  const finalizados = propios.filter((p) => ['Cobrado', 'Cancelado'].includes(p.estado));
+  // Activos: todavía hay algo pendiente (entregar, o RAMICOR le debe pagar).
+  const activos = propios.filter((p) => p.estado !== 'Cancelado' && !p.choferPagoConfirmado);
+  // Finalizados: ya cobró su parte, o el pedido se canceló (no hay nada más que hacer).
+  const finalizados = propios.filter((p) => p.estado === 'Cancelado' || p.choferPagoConfirmado);
 
   const reporte = useMemo(() => {
-    const pendientes = propios.filter((p) => p.estado === 'Tomado').length;
-    const completados = propios.filter((p) => p.estado === 'Completado').length;
-    const cobrados = propios.filter((p) => p.estado === 'Cobrado').length;
-    const totalCobrado = propios.filter((p) => p.estado === 'Cobrado').reduce((acc, p) => acc + (Number(p.cotizacion) || 0), 0);
-    return { pendientes, completados, cobrados, totalCobrado, total: propios.length };
+    const pendientesEntrega = propios.filter((p) => p.estado === 'Tomado').length;
+    const entregados = propios.filter((p) => ['Completado', 'Cobrado'].includes(p.estado)).length;
+    const pagosConfirmados = propios.filter((p) => p.choferPagoConfirmado).length;
+    const totalCobrado = propios.filter((p) => p.choferPagoConfirmado).reduce((acc, p) => acc + (Number(p.montoChofer) || 0), 0);
+    return { pendientesEntrega, entregados, pagosConfirmados, totalCobrado, total: propios.length };
   }, [propios]);
 
   return (
@@ -129,7 +138,7 @@ export function TransportistaPanel() {
               <div>
                 <strong>{p.id}</strong> · {p.tipoServicio} · {p.origen || '—'} → {p.destino || '—'}
                 <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                  {formatMoneda(p.cotizacion, p.moneda)}
+                  {p.montoChofer ? `Tu pago: ${formatMoneda(p.montoChofer)}` : 'Pago a coordinar'}
                   {p.tipoVehiculo ? ` · Requiere: ${p.tipoVehiculo}` : ''}
                   {p.tipoEnvio ? ` · ${p.tipoEnvio}` : ''}
                   {p.pesoKg ? ` · ${p.pesoKg}kg` : ''}
@@ -149,15 +158,16 @@ export function TransportistaPanel() {
           {!cargando && activos.length === 0 && <p style={{ color: 'var(--text-secondary)' }}>No tenés pedidos activos ahora — los finalizados quedan en "Reporte".</p>}
           {activos.map((p) => {
             const [tone, variant] = STATE_BADGE[p.estado] || ['neutral', 'soft'];
-            const pendiente = p.estado === 'Tomado';
+            const pendienteEntrega = p.estado === 'Tomado';
             return (
               <Card key={p.dbId} interactive onClick={() => setSeleccionado(p)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <strong>{p.id}</strong> · {p.origen || '—'} → {p.destino || '—'}
-                  <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{formatMoneda(p.cotizacion, p.moneda)}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{p.montoChofer ? formatMoneda(p.montoChofer) : 'Pago a coordinar'}</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {pendiente && <Badge tone="warning" variant="soft">Pendiente</Badge>}
+                  {pendienteEntrega && <Badge tone="warning" variant="soft">Pendiente de entrega</Badge>}
+                  {!pendienteEntrega && !p.choferPagoConfirmado && <Badge tone="warning" variant="soft">Pago pendiente</Badge>}
                   <Badge tone={tone} variant={variant}>{p.estado}</Badge>
                 </div>
               </Card>
@@ -171,9 +181,9 @@ export function TransportistaPanel() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 24 }}>
             {[
               { label: 'Total tomados', value: reporte.total },
-              { label: 'Pendientes de entrega', value: reporte.pendientes },
-              { label: 'Entregados', value: reporte.completados },
-              { label: 'Cobrados', value: reporte.cobrados },
+              { label: 'Pendientes de entrega', value: reporte.pendientesEntrega },
+              { label: 'Entregados', value: reporte.entregados },
+              { label: 'Pagos confirmados', value: reporte.pagosConfirmados },
               { label: 'Total cobrado', value: formatMoneda(reporte.totalCobrado) },
             ].map((k) => (
               <div key={k.label} style={{ background: 'var(--color-surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
@@ -192,9 +202,9 @@ export function TransportistaPanel() {
                 <Card key={p.dbId} interactive onClick={() => setSeleccionado(p)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <strong>{p.id}</strong> · {p.origen || '—'} → {p.destino || '—'}
-                    <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{formatMoneda(p.cotizacion, p.moneda)}</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{p.montoChofer ? formatMoneda(p.montoChofer) : '—'}</div>
                   </div>
-                  <Badge tone={tone} variant={variant}>{p.estado}</Badge>
+                  <Badge tone="success" variant="soft">Pago recibido</Badge>
                 </Card>
               );
             })}
@@ -219,17 +229,20 @@ export function TransportistaPanel() {
           <div style={{ marginTop: 16 }}>
             <ChatPedido pedidoId={seleccionado.dbId} autorTipo="transportista" />
           </div>
-          {seleccionado.cobradoPor && (
-            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 10 }}>
-              Cobrado por: {seleccionado.cobradoPor.nombre} ({seleccionado.cobradoPor.tipo === 'admin' ? 'admin' : 'chofer'})
-            </p>
-          )}
-          <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
+          <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start' }}>
             {seleccionado.estado === 'Tomado' && (
               <Button onClick={() => completar(seleccionado)}>Marcar como entregado</Button>
             )}
-            {['Tomado', 'Completado'].includes(seleccionado.estado) && (
-              <Button variant="secondary" onClick={() => cobrar(seleccionado)}>Marcar como cobrado</Button>
+            {!seleccionado.choferPagoConfirmado && (
+              <ConfirmarPagoChofer onConfirm={(metodo, comprobante) => confirmarPago(seleccionado, metodo, comprobante)} />
+            )}
+            {seleccionado.choferPagoConfirmado && (
+              <div>
+                <Badge tone="success" variant="soft">✅ Ya cobraste este viaje</Badge>
+                <div style={{ marginTop: 6 }}>
+                  <ComprobanteChofer metodo={seleccionado.choferPagoMetodo} comprobante={seleccionado.choferPagoComprobante} />
+                </div>
+              </div>
             )}
           </div>
         </Modal>

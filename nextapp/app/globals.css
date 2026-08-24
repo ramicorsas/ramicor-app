@@ -43,8 +43,27 @@ body {
   animation: ramicor-fade-up 0.6s ease-out both;
 }
 
+@keyframes ramicor-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.ramicor-marquee-track {
+  animation: ramicor-marquee 22s linear infinite;
+}
+
+.ramicor-card-hover {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.ramicor-card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(11, 42, 74, 0.12);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ramicor-route-line { animation: none; }
   .ramicor-fade-up { animation: none; opacity: 1; transform: none; }
+  .ramicor-marquee-track { animation: none; }
+  .ramicor-card-hover { transition: none; }
 }
 

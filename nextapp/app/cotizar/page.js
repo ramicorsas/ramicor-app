@@ -5,8 +5,7 @@ import { Input } from '@/components/ds/Input';
 import { Select } from '@/components/ds/Select';
 import { Button } from '@/components/ds/Button';
 import { PublicHeader, PublicFooter } from '@/components/shared/PublicHeader';
-import { TIPOS_VEHICULO } from '@/components/shared/constants';
-
+import { TIPOS_VEHICULO, METODOS_PAGO } from '@/components/shared/constants';
 const RAMICOR_WHATSAPP = '5493512120413';
 
 const CAMINOS = [
@@ -37,9 +36,18 @@ const CAMINOS = [
       { key: 'volumen', label: 'Volumen estimado de entregas', options: ['1–5 entregas por semana', '5–20 entregas por semana', 'Más de 20 por semana', 'Variable según temporada'] },
     ],
   },
+  {
+    id: 'Utilitarios y Maquinas',
+    titulo: 'Maquinaria',
+    desc: 'Bobcat, retroexcavadora, mini grúa y más, con maquinista incluido.',
+    preguntas: [
+      { key: 'maquina', label: '¿Qué máquina necesitás?', options: ['Bobcat / minicargadora', 'Retroexcavadora', 'Mini grúa', 'Camión con hidrogrúa', 'Otra'] },
+      { key: 'duracion', label: '¿Por cuánto tiempo?', options: ['Medio día', 'Día completo', 'Varios días', 'Por hora'] },
+    ],
+  },
 ];
 
-const contactoInicial = { nombre: '', telefono: '', email: '', origen: '', destino: '', observaciones: '', pesoKg: '', tipoVehiculo: '' };
+const contactoInicial = { nombre: '', telefono: '', email: '', origen: '', destino: '', observaciones: '', pesoKg: '', tipoVehiculo: '', metodoPago: '' };
 
 export default function CotizarPage() {
   const [camino, setCamino] = useState(null);
@@ -53,7 +61,7 @@ export default function CotizarPage() {
 
   async function enviar(e) {
     e.preventDefault();
-    if (!contacto.pesoKg || !contacto.tipoVehiculo) {
+    if (!contacto.pesoKg || !contacto.tipoVehiculo || !contacto.metodoPago) {
       setEstado('faltan-datos');
       return;
     }
@@ -72,6 +80,7 @@ export default function CotizarPage() {
           observaciones: contacto.observaciones,
           pesoKg: contacto.pesoKg,
           tipoVehiculo: contacto.tipoVehiculo,
+          metodoPago: contacto.metodoPago,
           detalleExtra: respuestas,
         }),
       });
@@ -165,6 +174,9 @@ export default function CotizarPage() {
               options={TIPOS_VEHICULO} placeholder="Elegí una capacidad" />
           </div>
 
+          <Select label="Método de pago" required value={contacto.metodoPago} onChange={(e) => setContactoField('metodoPago', e.target.value)}
+            options={METODOS_PAGO.map((m) => ({ value: m, label: m }))} placeholder="¿Cómo vas a pagar?" />
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Input label="Nombre completo" required value={contacto.nombre} onChange={(e) => setContactoField('nombre', e.target.value)} />
             <Input label="Teléfono / WhatsApp" required value={contacto.telefono} onChange={(e) => setContactoField('telefono', e.target.value)} />
@@ -177,7 +189,7 @@ export default function CotizarPage() {
           <Input label="Observaciones" value={contacto.observaciones} onChange={(e) => setContactoField('observaciones', e.target.value)} />
 
           {estado === 'error' && <p style={{ color: 'var(--color-danger)', fontSize: 13 }}>Hubo un error al enviar. Probá de nuevo.</p>}
-          {estado === 'faltan-datos' && <p style={{ color: 'var(--color-danger)', fontSize: 13 }}>Completá el peso y el tipo de vehículo antes de enviar.</p>}
+          {estado === 'faltan-datos' && <p style={{ color: 'var(--color-danger)', fontSize: 13 }}>Completá el peso, el tipo de vehículo y el método de pago antes de enviar.</p>}
           <Button type="submit" disabled={estado === 'enviando'} fullWidth>
             {estado === 'enviando' ? 'Enviando...' : 'Solicitar flete →'}
           </Button>
